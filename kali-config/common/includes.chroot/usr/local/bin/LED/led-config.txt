@@ -1,0 +1,99 @@
+#######################################################################
+# Arquivo de Configuracao do LED - Localizador de Evidencias Digitais #
+#######################################################################
+
+#### Extensoes Tratadas 
+Imagens = jpeg;jpg;bmp;png;gif;tif;jpe;jfif;tiff;webp;heic;wbmp;ppm;pgm;pbm;xcf
+Videos = avi;mp4;mpg;mpeg;mov;vob;3gp;flv;wmv;rm;asf;mpe;wm;ram;divx;m4v;mkv;m1v;rmvb;3gpp;dt2;mpv;3g2;mts;qt;webm;m2ts;m2v;ff;ogv;f4v;ogm;downloading;part;asx;m2t;riff;mod;ts
+Compactados = zip;rar;7z;iso
+Conteudo = txt;html;htm;eml;js;asp;aspx;php;mbox;dbx;msf;mab;sqlite;lnk;wab;db
+
+#### Termos Suspeitos (utilizados na busca por nome de arquivo) 
+TermosSuspeitos = adolescente;angel;babies;baby;bambin;bebe;bebê;blackcat;boy;bucetinha;child;crianca;criança;cuties;cuzinho;darkcollection;daughter;defloration;fuck;funky;garotinh;gatinh;genital;girl;hairless;hentai;hurtmeh;hussyfan;hussyfun;hymen;incest;infant;jailbait;kiddie;kiddy;kids;kidzilla;kinderkutje;kingpass;kleuterkutje;liluplanet;lola;lolita;lolilust;nina;ninfet;novinh;nymph;paedo;pedo;pthc;ptsc;qqaazz;r@ygold;rape;raygold;sdpa;teen;toddler;underage;vicky;virgem;virgen;virgin;0 yo;0yo;0yr;1 yo;1yo;1yr;2 yo;2yo;2yr;3 yo;3yo;3yr;4 yo;4yo;4yr;5 yo;5yo;5yr;6 yo;6yo;6yr;7 yo;7yo;7yr;8 yo;8yo;8yr;9 yo;9yo;9yr;gigatribe;shareaza;emule;dreamule;kazaa;amule;limewire;frostwire;torbrowser;tormessenger;torchat;kdquality;kinderficker;lsbar;mafiasex;lordofthering;nablot;nimphet;pretten;opva;2jvnpygai7z6uvkw;3m2mcxyuvx7sjurh;3wkcznbshhkeaede;4jznz3kcagiqxowb;4q2lxcv26d6xjlay;6zx6cxigcq7tjtue;7mdzuqhtqzaxhxpi;7q3siksb5c6trcqo;aknsdc3jku7of5qe;auutwvpt2zktxwng;avyeyuxi2dcf4cmi;babyixntjlabwkpi;bdclubqtqy2cvso2;boysopidonajtogl;boyvidsaullbcnhu;boyvidscckevqedz;chatlistea3zbsck;childsplayboq3sq;cpvls4gi2cvvirrk;elysiumucxuu3rs2;es2adizg32j3kob5;girhkbbgsglcj4jk;gokchgwvlprblrxc;grams7enufi7jmdl;gxmrzk2s56oxzb3e;hss3uro2hsxfogfq;hurtmehpneqdprmj;hwiki2tzj277eepp;hyjmkmb3lfymiprp;jjvxrbpckwpz3kwu;m2nkhqte4sxilvre;mail2tor2zyjdctd;mailtoralnhyol5v;mkingdompdzmk7e3;mt3plrzdiyqf6jim;muff7i44irws3mwu;njwzqbbwt5wpenog;olieomd25ui2zwmu;op4jvhn65pjv3slt;opva2pilsncvtwmh;oxwugzccvk3dk6tj;pbchatkoollgzmbf;pedoartre6ookiff;pedochmilnyxthis;pedoncnkqgghgk7e;qce3tl2wr4h3g2c7;rtxoifxmiyimzp3m;saemf4erbrvhfddd;streamxxhqn3k64x;teensexaqb2wbloa;teensexixxowrrgf;tenplus547yrmxld;tlz4usfmkau5febr;tmoxh4kr5xfnvxun;torblogjp5rjeyhx;toyboxmdablekkzf;tz2u3xs63fbx4jjb;uhwikih256ynt57t;updoabb6pcii3po5;upf45jv3bziuctml;uz2tz3hgh4td6j6a;v4stwi3tzicuh6vh;wxlcwyoisgi3725u;xkinder5eseudi2h;xplayyyyyirxui4n;xqmvgskrgmuytie6;y46n5mcakffjqpzw;ybswra66ouubgzb2;ye4x7dzr6w2dpa7c;yn5u473m54dbptve;zqktlwi4fecvo6ri;jjclubumn7vkhyuw;5figq755l7c55eopjphypkpfj5b4ap5nm6rvie2tygcwtafbjhv3p3id;gk3fgh3hqpiprgl5wgazny5qsxjjzndenzpgdsd6f7z4adrxaosf4dqd;bxkqj6tqkamhrdmpsf6ehxgbqvayusionnlqc4kskaqdlvzjevwjnpid
+
+#### Termos utilizados na busca simples no conteudo do arquivo.
+TermosConteudo = babyheart;babyj;babyshivid;babyshvid;bucetinha;cuzinho;darkcollection;defloration;hurtmeh;hussyfan;hussyfun;jailbait;kidzilla;kinderkutje;kingpass;kleuterkutje;liluplanet;lolilust;lolita;pedofilia;pedofilo;preteen;pthc;qqaazz;r@ygold;raygold;underage;gigatribe;shareaza;emule;dreamule;kazaa;amule;limewire;frostwire;torbrowser;tormessenger;torchat;kdquality;kinderficker;mafiasex;childfugga;mylola;lolalover;toddler;lordofthering;childsex;nablot;nimphet;reallola;2jvnpygai7z6uvkw;3m2mcxyuvx7sjurh;3wkcznbshhkeaede;4jznz3kcagiqxowb;4q2lxcv26d6xjlay;6zx6cxigcq7tjtue;7mdzuqhtqzaxhxpi;7q3siksb5c6trcqo;aknsdc3jku7of5qe;auutwvpt2zktxwng;avyeyuxi2dcf4cmi;babyixntjlabwkpi;bdclubqtqy2cvso2;boysopidonajtogl;boyvids;chatlistea3zbsck;childsplayboq3sq;cpvls4gi2cvvirrk;elysiumucxuu3rs2;es2adizg32j3kob5;girhkbbgsglcj4jk;gokchgwvlprblrxc;grams7enufi7jmdl;gxmrzk2s56oxzb3e;hss3uro2hsxfogfq;hurtmehpneqdprmj;hwiki2tzj277eepp;hyjmkmb3lfymiprp;jjvxrbpckwpz3kwu;m2nkhqte4sxilvre;mail2tor2zyjdctd;mailtoralnhyol5v;mkingdompdzmk7e3;mt3plrzdiyqf6jim;muff7i44irws3mwu;njwzqbbwt5wpenog;olieomd25ui2zwmu;op4jvhn65pjv3slt;opva2pilsncvtwmh;oxwugzccvk3dk6tj;pbchatkoollgzmbf;pedoartre6ookiff;pedochmilnyxthis;pedoncnkqgghgk7e;qce3tl2wr4h3g2c7;rtxoifxmiyimzp3m;saemf4erbrvhfddd;streamxxhqn3k64x;teensexaqb2wbloa;teensexixxowrrgf;tenplus547yrmxld;tlz4usfmkau5febr;tmoxh4kr5xfnvxun;torblogjp5rjeyhx;toyboxmdablekkzf;tz2u3xs63fbx4jjb;uhwikih256ynt57t;updoabb6pcii3po5;upf45jv3bziuctml;uz2tz3hgh4td6j6a;v4stwi3tzicuh6vh;wxlcwyoisgi3725u;xkinder5eseudi2h;xplayyyyyirxui4n;xqmvgskrgmuytie6;y46n5mcakffjqpzw;ybswra66ouubgzb2;ye4x7dzr6w2dpa7c;yn5u473m54dbptve;zqktlwi4fecvo6ri;jjclubumn7vkhyuw;5figq755l7c55eopjphypkpfj5b4ap5nm6rvie2tygcwtafbjhv3p3id;gk3fgh3hqpiprgl5wgazny5qsxjjzndenzpgdsd6f7z4adrxaosf4dqd;bxkqj6tqkamhrdmpsf6ehxgbqvayusionnlqc4kskaqdlvzjevwjnpid
+
+#### Termos a serem Ignorados (utilizados para reduzir a quantidade de falsos positivos localizados por nome)
+TermosIgnorar = ssdpapi;cateenrollment;angel64;angelu64;angel264;depthconvert;changelog;digirlpt;certificateencod;certificateentry;changelist;typedoc;arrangelist;trapezoid;createencrypt;mininav;stateengine;babyboynotes;babyboymain;babyboyscenes;grapes;grapefruit;notificationin;babylon;x86_angel;los_angeles
+
+#### Pasta com arquivos com listas de arquivos conhecidos, no formato do LED
+PastaArquivosConhecidos = hashes-txt
+
+#### Pasta com arquivos pre-processados
+PastaArquivosPreprocessados = hashes-bin
+
+#### Quantidade Minima de Caracteres para Considerar nome Conhecido (evita hits com nome genericos, ex: IMG0001.jpg, DSC0123.JPG, aa.jpg)
+TamanhoMinimoNomeConhecido = 18
+ 
+#### Quantidade Maxima de Caracteres para Considerar nome Conhecido (evita buscar nomes excessivamente longos)
+TamanhoMaximoNomeConhecido = 40
+
+#### Alerta para todos arquivos maiores que o parametro especificado (em MBytes)
+TamanhoAlertaArquivoGrande = 500
+
+#### Quantidade Maxima de Arquivos Suspeitos a serem listados
+MaximoArquivos = 200000
+
+#### Verifica o TAMANHO do arquivo na verificacao de hits de hash (Padrão: TAMANHO -> HASH INICIO (512, 64K e 1M))
+VerificaTamanho = 1
+
+#### Verifica o HASH INICIO do arquivo na verificacao de hits de hash (Padrão: TAMANHO -> HASH INICIO (512, 64K e 1M))
+VerificaHashInicio = 1
+
+#### Verifica o HASH COMPLETO do arquivo na verificacao de hits de hash (Padrão: Desabilitado, alterar para 1 para continuar calculando depois de 1M)
+VerificaHashCompleto = 0
+
+#### Nomes de arquivos relevantes. Arquivos come estes nomes sao adicionados na lista quando localizados. 
+ArquivosRelevantes = downloads.dat;library5.dat;spam.dat;createtimes.cache;fileurns.cache;limewire.props;truecrypt.exe;lockdir.exe;library1.dat;library2.dat;searches.dat;gnutella.net;tor.exe;torchat.exe;main.db
+
+#### Habilita(1) ou desabilita alerta para arquivo KNOWN.MET do EMule e SHAREH.DAT/SHAREL.DAT do Ares.
+AlertaP2P = 1
+
+#### Habilita(1) ou desabilita alerta para arquivos do Registro do Windows (SOFTWARE, SAM, SYSTEM, SECURIRY e NTUSER.DAT).
+AlertaRegistro = 1
+
+#### Habilita(1) ou desabilita a extracao de cenas dos videos (necessita o MPlayer instalado e configurado).
+ExtracaoCenasVideos = 1 
+
+#### Configuracao do caminho (completo ou relativo a pasta do LED) do MPLAYER para extracao de cenas dos videos.
+# Chave usada no WINDOWS (padrao subpasta "mplayer" relativa ao LED)
+MPlayer-Windows = mplayer/mplayer.exe
+# Chave usado no LINUX ou outro sistema operacional (padrao sem caminho, funciona se o mplayer for localizado automaticamente, no caminho). 
+MPlayer = mplayer
+
+#### Pasta Temporaria (necessaria para a extracao de cenas de videos), caminho completo ou relativo a pasta do LED. Obs: Usar "/" como separador de caminho. 
+PastaTemp = tmp
+
+#### Configuracao de extracao de cenas de videos, para VISUALIZACAO no programa, no formato <Largura em pixels de cada cena>,<Numero de colunas>,<Numero de linhas>. Quanto mais cenas/resolucao, mais lento o processo de extracao.
+MiniaturasVideosVisualizacao = 240,3,3
+
+#### Configuracao de extracao de cenas, utilizada quando arquivos de video sao EXPORTADOS (mesmo formato <Largura em Pixels>,<Colunas>,<Linhas>) na subpasta "miniaturas". Comentar para desabilitar. 
+MiniaturasVideosExportacao = 320,3,6
+
+#### Threads extracao de cenas de video. default = numero de processadores disponiveis, configuracao recomendada no Windows e maquinas com quantidade razoavel de memoria (>= 8 GB). No Linux, ou maquinas com pouca memoria, recomenda-se reduzir.
+ThreadsVideos = 1
+
+#### Habilita(1) ou desabilita saida do MPlayer no log. Deve ser utilizado apenas para depurar problemas de ambiente relacionados ao MPlayer.
+VerboseVideos = 0
+
+#### Habilita(1) ou desabilita a busca por conteudo de arquivos.
+BuscaPorConteudo = 1
+
+#### Tamanho maximo, em MBytes, de busca por conteudo (pesquisa apenas nos primeiros bytes se o arquivo for maior).
+TamanhoMaximoBuscaConteudo = 10 
+
+#### Arquivo (com caminho relativo a partir da pasta deste arquivo de configuracao) de dados utilizado pelo algoritmo de deteccao de imagens explicitas (DIE). Comentar essa linha para desabilitar o DIE. 
+DeteccaoImagensExplicitas = die/rfdie.dat
+
+#### Ajuste do tamanho das fontes e componentes do programa. Valor aceitos são inteiros, correspondentes a porcentagem de ampliação, sendo o padrão 100. Por exemplo, 120 corresponde a um aumento de 20% e 80 a uma redução de 20%. Em monitores bem pequenos pode ser interessante reduzir este fator.
+FatorAjusteInterface = 100
+
+#### Caminhos incluidos na busca por conteudo. Se o caminho completo do arquivo contiver uma destas strings (independente de maiusc./minusc.), todos os arquivos (exceto com as extensoes configuradas como exclusao) da pasta sao incluidos. Obs: Usar somente "/" como separador.
+PastasBuscasConteudo = chrome/;thunderbird/;firefox/;mozilla/;/temporary internet files/;/desktop/;/documents/
+
+#### Excluir da busca por conteudo os arquivo com as extensoes a seguir (que foram incluidos pelo criterio de pasta) 
+ExcluirConteudo = exe;nexe;dll;zip;7z;xlsx;docx;pak;rar;jar;swf;swz;ico;bdic;dic
+
+#### Termos Especificos da Busca (sao somados aos especificados na lista de 'TermosSupeitos' e 'TermosConteudo'), apenas para facilitar a manutencao do arquivo de configuracao.
+TermosEspecificos = 

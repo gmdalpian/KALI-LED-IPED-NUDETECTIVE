@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=IPED - Fastmode
+Comment=
+Exec=/usr/local/bin/iped/IPED-fastmode.sh
+Icon=/home/kali/Pictures/iped.png
+Path=/usr/local/bin/iped/
+Terminal=false
+StartupNotify=false

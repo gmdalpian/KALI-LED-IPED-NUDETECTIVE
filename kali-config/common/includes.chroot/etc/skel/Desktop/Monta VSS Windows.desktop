@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Monta VSS Windows
+Comment=Monta as unidades Volume Shadow Copy (VSS) do Windows
+Exec=/home/kali/mount_windows_shadows.sh
+Icon=drive-multidisk
+Path=/home/kali
+Terminal=false
+StartupNotify=false

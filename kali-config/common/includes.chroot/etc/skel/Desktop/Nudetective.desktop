@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Nudetective
+Comment=Nudetective
+Exec=/usr/local/bin/NuDetective4/nudetective
+Icon=/home/kali/Pictures/nudetective.jpg
+Path=/usr/local/bin/NuDetective4/
+Terminal=false
+StartupNotify=false
+GenericName=Nudetective

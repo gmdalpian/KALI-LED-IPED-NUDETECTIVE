@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Montar Unidades
+Comment=Monta as unidades reconhecidas como somente leitura
+Exec=/home/kali/mount_disks.sh
+Icon=drive-multidisk
+Path=/home/kali
+Terminal=false
+StartupNotify=false

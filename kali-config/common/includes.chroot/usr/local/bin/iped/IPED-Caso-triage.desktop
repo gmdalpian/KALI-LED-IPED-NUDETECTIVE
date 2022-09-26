@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=IPED-Caso
+Comment=Abrir caso processado IPED
+Exec=/home/kali/Desktop/triage/IPED-CASO/Ferramenta_de_Pesquisa.sh
+Icon=/home/kali/Pictures/iped.png
+Path=/home/kali/Desktop/triage/IPED-CASO/
+Terminal=false
+StartupNotify=false

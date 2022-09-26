@@ -1,0 +1,22 @@
+[Default Applications]
+inode/directory=thunar.desktop
+image/bmp=org.xfce.ristretto.desktop
+image/gif=org.xfce.ristretto.desktop
+image/jpeg=org.xfce.ristretto.desktop
+image/png=org.xfce.ristretto.desktop
+image/svg+xml=org.xfce.ristretto.desktop
+image/tiff=org.xfce.ristretto.desktop
+image/vnd.microsoft.icon=org.xfce.ristretto.desktop
+image/webp=org.xfce.ristretto.desktop
+text/calendar=org.xfce.mousepad.desktop
+text/css=org.xfce.mousepad.desktop
+text/csv=org.xfce.mousepad.desktop
+text/plain=org.xfce.mousepad.desktop
+video/3gpp=mpv.desktop
+video/3gpp2=mpv.desktop
+video/mp2t=mpv.desktop
+video/mp4=mpv.desktop
+video/mpeg=mpv.desktop
+video/ogg=mpv.desktop
+video/webm=mpv.desktop
+video/x-msvideo=mpv.desktop

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=LED - Montar e Vasculhar
+Comment=Executa o LED nos discos detectados
+Exec=/usr/local/bin/LED/start-led.sh
+Icon=/home/kali/Pictures/led.png
+Path=/usr/local/bin/LED
+Terminal=false
+StartupNotify=false

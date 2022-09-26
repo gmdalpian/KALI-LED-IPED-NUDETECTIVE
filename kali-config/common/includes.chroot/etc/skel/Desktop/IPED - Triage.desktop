@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=IPED - Triage
+Comment=Realiza uma indexacao e processamento parcial dos discos
+Exec=/usr/local/bin/iped/IPED-triage-ativos.sh
+Icon=/home/kali/Pictures/iped.png
+Path=/usr/local/bin/iped/
+Terminal=false
+StartupNotify=false
