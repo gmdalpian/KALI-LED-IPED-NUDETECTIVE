@@ -1,0 +1,8 @@
+<resultSetViewers>
+
+	<resultSetViewer>
+		<class>iped.geo.impl.MapViewer</class>
+	</resultSetViewer>
+
+</resultSetViewers>
+
