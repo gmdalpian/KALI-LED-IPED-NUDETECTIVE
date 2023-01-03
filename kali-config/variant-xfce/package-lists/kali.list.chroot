@@ -51,4 +51,5 @@ xmount
 adb
 vlc-bin
 libvshadow-utils
+openjdk-11-jdk
 openjfx
