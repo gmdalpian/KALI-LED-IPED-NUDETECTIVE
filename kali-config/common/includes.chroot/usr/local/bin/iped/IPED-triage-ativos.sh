@@ -39,7 +39,7 @@ then
 
     mkdir /home/kali/Desktop/IPED-CASO/		
 
-	sudo PATH=/usr/local/bin/sleuthkit-4.11.1_iped_patch/bin/:$PATH java -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -profile triage -l /usr/local/bin/iped/palavras-chave.txt -d /media/
+	sudo java -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -profile triage -l /usr/local/bin/iped/palavras-chave.txt -d /media/
 
 	cp Ferramenta_de_Pesquisa.sh /home/kali/Desktop/IPED-CASO/
 	cp "IPED-Caso.desktop" /home/kali/Desktop/
@@ -56,7 +56,7 @@ else
 
 	sudo mkdir /home/kali/Desktop/triage/IPED-CASO/
 	
-	cmdline_triage="sudo PATH=/usr/local/bin/sleuthkit-4.11.1_iped_patch/bin/:$PATH java -jar iped.jar -o /home/kali/Desktop/triage/IPED-CASO/ -profile triage -log /home/kali/Desktop/triage/IPED-Processamento-$(date +%y%m%d%H%M).log -d /media/"
+	cmdline_triage="sudo java -jar iped.jar -o /home/kali/Desktop/triage/IPED-CASO/ -profile triage -log /home/kali/Desktop/triage/IPED-Processamento-$(date +%y%m%d%H%M).log -d /media/"
 	
    	if sudo test -f /home/kali/Desktop/triage/palavras-chave.txt;  
 	then

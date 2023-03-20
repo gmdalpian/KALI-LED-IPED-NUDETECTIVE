@@ -66,7 +66,7 @@ MPlayer = mplayer
 PastaTemp = tmp
 
 #### Configuracao de extracao de cenas de videos, para VISUALIZACAO no programa, no formato <Largura em pixels de cada cena>,<Numero de colunas>,<Numero de linhas>. Quanto mais cenas/resolucao, mais lento o processo de extracao.
-MiniaturasVideosVisualizacao = 240,3,3
+MiniaturasVideosVisualizacao = 256,3,3
 
 #### Configuracao de extracao de cenas, utilizada quando arquivos de video sao EXPORTADOS (mesmo formato <Largura em Pixels>,<Colunas>,<Linhas>) na subpasta "miniaturas". Comentar para desabilitar. 
 MiniaturasVideosExportacao = 320,3,6

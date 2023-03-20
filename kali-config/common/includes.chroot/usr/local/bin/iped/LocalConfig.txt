@@ -28,7 +28,7 @@ numThreads = 2
 # Full path for sleuthkit-4.x.x.jar built on Linux OS.
 # It is distributed a Windows only version with some optimization patches.
 # It is recommended to apply the patch (in source folder) before building sleuthkit on Linux.
-tskJarPath = /usr/local/bin/sleuthkit-4.11.1_iped_patch/share/java/sleuthkit-4.11.1.jar
+tskJarPath = /usr/local/bin/sleuthkit-4.12.0_iped_patch/share/java/sleuthkit-4.12.0.jar
 
 # Relative path for mplayer on Windows.
 # For Linux OS, mplayer must be on PATH. Do not comment out the param below.
@@ -37,6 +37,3 @@ mplayerPath = /usr/bin/mplayer
 # Plugin folder for optional libs not embedded because of license restrictions.
 # They will be dynamically loaded at runtime.
 pluginFolder = ../plugins/
-
-# Path for RegRipper folder.
-regripperFolder = ../../../share/windows-resources/regripper/

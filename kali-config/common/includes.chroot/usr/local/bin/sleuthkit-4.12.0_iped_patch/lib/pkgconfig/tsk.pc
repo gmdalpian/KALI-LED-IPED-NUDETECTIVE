@@ -1,0 +1,15 @@
+prefix=/usr/local/bin/sleuthkit-4.12.0_iped_patch
+exec_prefix=/usr/local/bin/sleuthkit-4.12.0_iped_patch
+includedir=/usr/local/bin/sleuthkit-4.12.0_iped_patch/include
+libdir=/usr/local/bin/sleuthkit-4.12.0_iped_patch/lib
+
+Name: sleuthkit
+Description: An open source forensic toolkit
+URL: http://www.sleuthkit.org/sleuthkit
+Version: 4.12.0
+
+Cflags: -I${includedir}
+Libs: -L${libdir} -ltsk
+Libs.private: -lsqlite3 -lafflib -lbfio
+Requires: 
+Requires.private: sqlite3 zlib libewf libvhdi libvmdk 

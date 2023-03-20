@@ -9,7 +9,7 @@ mkdir /home/kali/Desktop/IPED-CASO/
 
 cd /usr/local/bin/iped/
 
-cmdline="sudo PATH=/usr/local/bin/sleuthkit-4.11.1_iped_patch/bin/:$PATH java -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -l /usr/local/bin/iped/palavras-chave.txt"
+cmdline="sudo java -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -l /usr/local/bin/iped/palavras-chave.txt"
 
 root_system=`cat /proc/mounts | grep /run/live/medium | awk '{print $1}'`
 
