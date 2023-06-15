@@ -96,7 +96,7 @@ then
 
     mkdir /home/kali/Desktop/IPED-CASO/		
 
-	cmdline="sudo java -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -profile triage -l /usr/local/bin/iped/palavras-chave.txt"
+	cmdline="sudo java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -profile triage -l /usr/local/bin/iped/palavras-chave.txt"
 	
 	$cmdline $diskstoprocess
 
@@ -115,7 +115,7 @@ else
 
 	sudo mkdir /home/kali/Desktop/triage/IPED-CASO/
 	
-	cmdline_triage="sudo java -jar iped.jar -o /home/kali/Desktop/triage/IPED-CASO/ -profile triage -log /home/kali/Desktop/triage/IPED-Processamento-$(date +%y%m%d%H%M).log"
+	cmdline_triage="sudo java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar -o /home/kali/Desktop/triage/IPED-CASO/ -profile triage -log /home/kali/Desktop/triage/IPED-Processamento-$(date +%y%m%d%H%M).log"
 	
    	if sudo test -f /home/kali/Desktop/triage/palavras-chave.txt;  
 	then

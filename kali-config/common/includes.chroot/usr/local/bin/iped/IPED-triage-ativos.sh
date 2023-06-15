@@ -39,7 +39,7 @@ then
 
     mkdir /home/kali/Desktop/IPED-CASO/		
 
-	sudo java -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -profile triage -l /usr/local/bin/iped/palavras-chave.txt -d /media/
+	sudo java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -profile triage -l /usr/local/bin/iped/palavras-chave.txt -d /media/
 
 	cp Ferramenta_de_Pesquisa.sh /home/kali/Desktop/IPED-CASO/
 	cp "IPED-Caso.desktop" /home/kali/Desktop/
@@ -56,7 +56,7 @@ else
 
 	sudo mkdir /home/kali/Desktop/triage/IPED-CASO/
 	
-	cmdline_triage="sudo java -jar iped.jar -o /home/kali/Desktop/triage/IPED-CASO/ -profile triage -log /home/kali/Desktop/triage/IPED-Processamento-$(date +%y%m%d%H%M).log -d /media/"
+	cmdline_triage="sudo java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar -o /home/kali/Desktop/triage/IPED-CASO/ -profile triage -log /home/kali/Desktop/triage/IPED-Processamento-$(date +%y%m%d%H%M).log -d /media/"
 	
    	if sudo test -f /home/kali/Desktop/triage/palavras-chave.txt;  
 	then

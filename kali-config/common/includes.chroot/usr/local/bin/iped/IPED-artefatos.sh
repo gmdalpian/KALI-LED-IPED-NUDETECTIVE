@@ -9,7 +9,7 @@ mkdir /home/kali/Desktop/IPED-CASO/
 
 cd /usr/local/bin/iped/
 
-cmdline="sudo java -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -l /usr/local/bin/iped/palavras-chave.txt"
+cmdline="sudo java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -l /usr/local/bin/iped/palavras-chave.txt"
 
 root_system=`cat /proc/mounts | grep /run/live/medium | awk '{print $1}'`
 
