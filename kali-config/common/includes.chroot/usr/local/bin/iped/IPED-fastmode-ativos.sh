@@ -11,7 +11,7 @@ mkdir /home/kali/Desktop/IPED-CASO/
 
 cd /usr/local/bin/iped/
 
-sudo java -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -profile fastmode -d /media/ -l /usr/local/bin/iped/palavras-chave.txt
+sudo java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -profile fastmode -d /media/ -l /usr/local/bin/iped/palavras-chave.txt
 
 cp Ferramenta_de_Pesquisa.sh /home/kali/Desktop/IPED-CASO/
 cp "IPED-Caso.desktop" /home/kali/Desktop/
