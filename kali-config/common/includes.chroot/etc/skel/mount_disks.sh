@@ -55,7 +55,7 @@ while read line ; do
 				sudo mount -o loop,ro /dislocker/bitlocker_$disk/dislocker-file /media/decrypted_$disk -t ntfs
 			else
 				while true; do
-					bitlocker_pass=$(zenity --entry --title="Detectado BitLocker!" --text="Detectou-se uma particao criptografada com bitlocker em /dev/$disk, \nporem nao foi possivel decripta-la automaticamente. \nEste script tentara montar as demais particoes, caso houver. \nCaso se tenha a chave de recuperacao, digite-a abaixo, com os numeros separados por hifens:" --entry-text "ChaveDeRecuperacao" --width=500)
+					bitlocker_pass=$(zenity --entry --title="Detectado BitLocker!" --text="Detectou-se uma particao criptografada com bitlocker em /dev/$disk, \nporem nao foi possivel decripta-la automaticamente. \nEste script tentara montar as demais particoes, se existirem. \nCaso se tenha a chave de recuperacao, digite-a abaixo, com os numeros separados por hifens:" --entry-text "ChaveDeRecuperacao" --width=500)
 					if [ $? = 0 ]
 					then 
 						sudo dislocker -V /dev/$disk -p$bitlocker_pass -- /dislocker/bitlocker_$disk -r
