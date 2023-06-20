@@ -6,5 +6,5 @@ Comment=
 Exec=/usr/local/bin/iped/IPED-fastmode.sh
 Icon=/home/kali/Pictures/iped.png
 Path=/usr/local/bin/iped/
-Terminal=false
+Terminal=true
 StartupNotify=false
