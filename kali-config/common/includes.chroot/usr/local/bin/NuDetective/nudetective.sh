@@ -6,6 +6,6 @@
 sudo mplayer
 
 # Executa NuDetective para Linux
-sudo java -Xms1G -Xmx4G -jar /usr/local/bin/NuDetective4/GUIMain2.jar NuDe40 ptBR
+sudo java -Xms1G -Xmx4G -jar /usr/local/bin/NuDetective/GUIMain2.jar NuDe40 ptBR
 exit
 
