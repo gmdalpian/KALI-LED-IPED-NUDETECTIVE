@@ -14,6 +14,9 @@ fi
 
 # busca e tenta montar as Volume Shadow Copy (VSS) do Windows
 echo "Tenta montar as Volume Shadow Copy (VSS) do Windows, caso existam"
+
+hasVSS="false"
+
 while read line ; do
     disk=`echo "$line" | awk '{print $1}'`
     if ! echo "$disk" | grep -q "$root_system"
@@ -21,6 +24,8 @@ while read line ; do
 		if sudo vshadowinfo /dev/$disk
 		then
 			echo "Encontrou VSS na particao $disk"
+			zenity --info --text="Encontrou VSS na particao $disk"
+			hasVSS="true"
 			sudo mkdir /vss
 			sudo mkdir /vss/vss_$disk
 			sudo vshadowmount /dev/$disk /vss/vss_$disk
@@ -38,6 +43,8 @@ for dislockerpart in $(sudo ls /dislocker); do
 	if sudo vshadowinfo /dislocker/$dislockerpart/dislocker-file
 	then
 		echo "Encontrou VSS na particao bitlocker $dislockerpart"
+		zenity --info --text="Encontrou VSS na particao $dislockerpart"
+		hasVSS="true"
 		sudo mkdir /vss
 		sudo mkdir /vss/vss_$dislockerpart
 		sudo vshadowmount /dislocker/$dislockerpart/dislocker-file /vss/vss_$dislockerpart
@@ -49,3 +56,7 @@ for dislockerpart in $(sudo ls /dislocker); do
 	fi
 done	
 
+if [[ "$hasVSS" == "false" ]]
+then
+  zenity --info --text="Nao foram localizadas copias de sombra VSS"
+fi

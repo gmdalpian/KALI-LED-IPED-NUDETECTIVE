@@ -44,6 +44,6 @@ else
     if [[ -n $(swapon -s) ]]; then
     	 zenity --info --text="Arquivo de memoria habilitado!"
     else
-       	 zenity --info --text= "Erro ao criar arquivo de memoria!"
+       	 zenity --info --text="Erro ao criar arquivo de memoria!"
     fi
 fi
