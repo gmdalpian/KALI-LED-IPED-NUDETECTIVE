@@ -14,3 +14,6 @@ text eol=lf
 *.png binary
 *.jpg binary
 *.so binary
+*.0 binary
+*.a binary
+*.la binary
