@@ -9,6 +9,8 @@ kali-desktop-live
 #kali-linux-core
 #kali-tools-top10
 kali-linux-default
+# This metapackage depends on all the forensic tools that Kali Linux provides.
+kali-tools-forensics
 #kali-linux-large
 #kali-linux-everything
 
