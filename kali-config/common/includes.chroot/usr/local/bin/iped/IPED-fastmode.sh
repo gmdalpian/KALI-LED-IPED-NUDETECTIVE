@@ -62,7 +62,25 @@ while read line ; do
 				cmdline+=" -d /dislocker/dislocker-file_$disk.dd"
 			else
 				while true; do
-					bitlocker_pass=$(zenity --entry --title="Detectado BitLocker!" --text="Detectou-se uma particao criptografada com bitlocker em /dev/$disk, \nporem nao foi possivel decripta-la automaticamente. \nEste script tentara montar as demais particoes, caso houver. \nCaso se tenha a chave de recuperacao, digite-a abaixo, com os numeros separados por hifens:" --entry-text "ChaveDeRecuperacao" --width=500)
+					#pega as informacoes do bitlocker e salva na variavel BITLOCKER_INFO
+					BITLOCKER_INFO=('', '')
+					while read line ; do
+						if [[ ! -z $line ]]
+						then
+							if [[ $line =~ "Description:" ]]; then
+								BITLOCKER_INFO[0]=$line
+							fi
+							if [[ $line =~ "VMK protected with recovery passphrase" ]]; then
+								BITLOCKER_INFO[1]=${previousline^^}
+							fi
+							previousline=$line;
+						fi
+					done <<< "$(sudo cryptsetup bitlkDump /dev/$disk)"
+					
+					recovery_key_id=`sudo dislocker-metadata -V /dev/$disk | grep 'Recovery Key' | head -n 1 | awk '{print $NF}'`
+					
+					bitlocker_pass=$(zenity --entry --title="Detectado BitLocker!" --text="Detectou-se uma particao criptografada com bitlocker em /dev/$disk, \nporem nao foi possivel decripta-la automaticamente. \nEste script tentara montar as demais particoes, se existirem. \nCaso se tenha a chave de recuperacao, digite-a abaixo, com os numeros separados por hifens: \n${BITLOCKER_INFO[0]} \n${BITLOCKER_INFO[1]}" --entry-text "ChaveDeRecuperacao" --width=500)
+					
 					if [ $? = 0 ]
 					then 				    					
 						sudo dislocker -V /dev/$disk -p$bitlocker_pass -- /dislocker/bitlocker_$disk -r
