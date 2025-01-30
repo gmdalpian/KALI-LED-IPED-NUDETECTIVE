@@ -6,7 +6,7 @@
 -->
 <tasks>
     <!--<task script="ExampleScriptTask.js"></task>-->
-    <task script="IgnoreFilesByPathTask.js"></task>
+    <task script="IgnoreFilesByPathTask.js"></task>	
     <task class="iped.engine.task.SkipCommitedTask"></task>
     <task class="iped.engine.task.IgnoreHardLinkTask"></task>
     <task class="iped.engine.task.TempFileTask"></task>

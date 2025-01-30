@@ -1,4 +1,4 @@
-﻿########################################################################
+﻿﻿########################################################################
 # Processing Settings
 ########################################################################
 
@@ -10,7 +10,7 @@ enableLedDie = false
 enableYahooNSFWDetection = false
 ignoreDuplicates = false
 exportFileProps = true
-processFileSignatures = false
+processFileSignatures = true
 enableFileParsing = true
 expandContainers = true
 processEmbeddedDisks = false
@@ -18,9 +18,8 @@ enableRegexSearch = true
 enableAutomaticExportFiles = false
 enableLanguageDetect = false
 enableNamedEntityRecogniton = false
-enableGraphGeneration = false
+enableGraphGeneration = true
 entropyTest = false
-enableSplitLargeBinary = false
 indexFileContents = true
 enableAudioTranscription = false
 enableCarving = false
@@ -29,6 +28,7 @@ enableKnownMetCarving = false
 enableImageThumbs = false
 enableImageSimilarity = false
 enableFaceRecognition = false
+enableSearchHardwareWallets = true
 enableVideoThumbs = false
 enableDocThumbs = false
 enableHTMLReport = false

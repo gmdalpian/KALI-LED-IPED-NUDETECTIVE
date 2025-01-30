@@ -1,2 +1,0 @@
-# Add and process unallocated areas of images.
-addUnallocated = true

@@ -13,17 +13,22 @@ Contacts
 #ISO disks
 Internet History
 User Activities
+Event Transcript
 GDrive Synced Files
-#OLE files
-#Georeferenced Files
+OLE files
+Georeferenced Files
 Peer-to-peer
-#Event Files
+Chrome Cache
+Event Files
 
 # Generates registry reports:
 Windows Registry
 
 # Generates USN Journal reports
 #USN Journal
+
+#Generate Open Financial Exchange Spreadsheets
+Open Financial Exchange
 
 #Text Documents
 #Spreadsheets
