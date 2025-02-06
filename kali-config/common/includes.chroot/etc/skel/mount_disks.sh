@@ -19,6 +19,7 @@ while read line ; do
         if ! echo "$disk" | grep -q "$root_system"
         then           
            sudo mkdir /media/$disk
+           sudo blockdev --setro /dev/$disk
            sudo mount -o ro /dev/$disk /media/$disk
         fi
 done <<< "$(lsblk -l | grep 'part\|disk\|rom')"
