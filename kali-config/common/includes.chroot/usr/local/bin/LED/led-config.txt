@@ -3,7 +3,7 @@
 #######################################################################
 
 #### Extensoes Tratadas 
-Imagens = jpeg;jpg;bmp;png;gif;tif;jpe;jfif;tiff;webp;heic;wbmp;ppm;pgm;pbm;xcf
+Imagens = jpeg;jpg;bmp;png;gif;tif;jpe;jfif;tiff;webp;heic;wbmp;ppm;pgm;pbm;xcf;psd
 Videos = avi;mp4;mpg;mpeg;mov;vob;3gp;flv;wmv;rm;asf;mpe;wm;ram;divx;m4v;mkv;m1v;rmvb;3gpp;dt2;mpv;3g2;mts;qt;webm;m2ts;m2v;ff;ogv;f4v;ogm;downloading;part;asx;m2t;riff;mod;ts
 Compactados = zip;rar;7z;iso
 Conteudo = txt;html;htm;eml;js;asp;aspx;php;mbox;dbx;msf;mab;sqlite;lnk;wab;db

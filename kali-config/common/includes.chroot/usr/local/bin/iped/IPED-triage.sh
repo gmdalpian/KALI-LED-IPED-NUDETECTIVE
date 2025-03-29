@@ -83,21 +83,32 @@ while read line ; do
 					
 					recovery_key_id=`sudo dislocker-metadata -V /dev/$disk | grep 'Recovery Key' | head -n 1 | awk '{print $NF}'`
 					
-					bitlocker_pass=$(zenity --entry --title="Detectado BitLocker!" --text="Detectou-se uma particao criptografada com bitlocker em /dev/$disk, \nporem nao foi possivel decripta-la automaticamente. \nEste script tentara montar as demais particoes, se existirem. \nCaso se tenha a chave de recuperacao, digite-a abaixo, com os numeros separados por hifens: \n${BITLOCKER_INFO[0]} \n${BITLOCKER_INFO[1]}" --entry-text "ChaveDeRecuperacao" --width=500)
+					bitlocker_pass=$(zenity --entry --title="Detectado BitLocker!" --text="Detectou-se uma particao criptografada com bitlocker em /dev/$disk, porem nao foi possivel decripta-la automaticamente. \nEste script tentara montar as demais particoes, se existirem, mesmo que se clique em cancelar. \nCaso se tenha a chave de recuperacao ou a senha de acesso, digite-a abaixo: \n${BITLOCKER_INFO[0]} \n${BITLOCKER_INFO[1]}" --entry-text "ChaveDeRecuperacao" --width=500)
 					
 					if [ $? = 0 ]
-					then 				    					
+					then
 						sudo dislocker -V /dev/$disk -p$bitlocker_pass -- /dislocker/bitlocker_$disk -r
 						if sudo test -f /dislocker/bitlocker_$disk/dislocker-file;
 						then
+							# disco decriptografado com a chave de recuperacao, montando
 							sudo ln -s /dislocker/bitlocker_$disk/dislocker-file /dislocker/dislocker-file_$disk.dd
 							diskstoprocess+=" -d /dislocker/dislocker-file_$disk.dd"
 							break
 						else
-							zenity --error --title="Erro de Chave BitLocker!" --text="A chave fornecida nao decifrou a unidade." --width=300 --timeout=20
+							# tenta primeiramente montar usando a chave fornecida como senha de acesso
+							sudo dislocker -V /dev/$disk --user-password="$bitlocker_pass" -- /dislocker/bitlocker_$disk -r
+							if sudo test -f /dislocker/bitlocker_$disk/dislocker-file;
+							then
+								# disco decriptografado com a senha de acesso, montando
+								sudo ln -s /dislocker/bitlocker_$disk/dislocker-file /dislocker/dislocker-file_$disk.dd
+								diskstoprocess+=" -d /dislocker/dislocker-file_$disk.dd"
+								break
+							else
+								zenity --error --title="Erro de Chave BitLocker!" --text="A chave fornecida nao decifrou a unidade." --width=300 --timeout=20
+							fi
 						fi
 					else
-						break	
+						break
 					fi
 				done
 			fi      
