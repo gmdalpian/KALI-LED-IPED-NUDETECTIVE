@@ -137,8 +137,14 @@ then
 	./Ferramenta_de_Pesquisa.sh
 else
     echo "Localizou a particao triage em /dev/$triage"
-	mkdir /home/kali/Desktop/triage
-	sudo mount -o rw /dev/$triage /home/kali/Desktop/triage
+    # verifica se o diretorio triage ja existe e se foi montado
+    if findmnt --mountpoint /home/kali/Desktop/triage &> /dev/null; then
+        echo "Particao triage ja montada em /home/kali/Desktop/triage"
+    else        
+        echo "Montando particao triage"
+        mkdir /home/kali/Desktop/triage
+        sudo mount -o rw /dev/$triage /home/kali/Desktop/triage
+    fi
 	
 	sudo rm -rf /home/kali/Desktop/triage/IPED-CASO/
 

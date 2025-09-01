@@ -34,23 +34,11 @@ done <<< "$(lsblk -l | grep part)"
 if [ -z "$triage" ]
 then
     echo "Nao localizou particao triage"
-		
-    sudo rm -rf /home/kali/Desktop/IPED-CASO/
-
-    mkdir /home/kali/Desktop/IPED-CASO/		
-
-	sudo java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -profile triage -l /usr/local/bin/iped/palavras-chave.txt -d /media/
-
-	cp Ferramenta_de_Pesquisa.sh /home/kali/Desktop/IPED-CASO/
-	cp "IPED-Caso.desktop" /home/kali/Desktop/
-
-	cd /home/kali/Desktop/IPED-CASO/
-
-	./Ferramenta_de_Pesquisa.sh
+        zenity --error --title="Nao localizou particao Triage!" --text="Para que seja executado corretamente este aplicativo, e necessario que no disco contendo o Kali haja uma particao denominada IPED-TRIAGE, no formato exFAT, conforme manual de uso." --width=300 --timeout=20
 else
     echo "Localizou a particao triage em /dev/$triage"
-    
-	# verifica se o diretorio triage ja existe e se foi montado
+            
+    # verifica se o diretorio triage ja existe e se foi montado
     if findmnt --mountpoint /home/kali/Desktop/triage &> /dev/null; then
         echo "Particao triage ja montada em /home/kali/Desktop/triage"
     else        
@@ -58,12 +46,24 @@ else
         mkdir /home/kali/Desktop/triage
         sudo mount -o rw /dev/$triage /home/kali/Desktop/triage
     fi
+        
+    # verificar se a memoria swap ja foi habilitada
+    num_linhas=$(cat /proc/swaps | wc -l)
+    if [ "$num_linhas" -gt 1 ]; then   
+        echo "Memoria SWAP ja esta habilitada"
+        swapon --show    	 	
+    else
+	echo "Criando arquivo de memoria virtual swap..."
+        sudo truncate -s 10G /home/kali/Desktop/triage/swapfile
+        sudo mkswap /home/kali/Desktop/triage/swapfile
+        sudo swapon /home/kali/Desktop/triage/swapfile 
+    fi
 	
 	sudo rm -rf /home/kali/Desktop/triage/IPED-CASO/
 
 	sudo mkdir /home/kali/Desktop/triage/IPED-CASO/
 	
-	cmdline_triage="sudo java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar -o /home/kali/Desktop/triage/IPED-CASO/ -profile triage -log /home/kali/Desktop/triage/IPED-Processamento-$(date +%y%m%d%H%M).log -d /media/"
+	cmdline_triage="sudo java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar -o /home/kali/Desktop/triage/IPED-CASO/ -profile csam_triage -log /home/kali/Desktop/triage/IPED-Processamento-$(date +%y%m%d%H%M).log -d /media/"
 	
    	if sudo test -f /home/kali/Desktop/triage/palavras-chave.txt;  
 	then

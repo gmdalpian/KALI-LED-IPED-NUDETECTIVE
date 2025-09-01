@@ -23,7 +23,7 @@ numThreads = default
 
 # Full path for IPED hash database. It is highly recommended to store it on a fast disk, 
 # preferably SSD, and not the same used as "indexTemp", if other disk is available.
-#hashesDB = C:/IPED/iped-hashes.db
+hashesDB = /home/kali/Desktop/triage/IPED-HASHESDB/iped-hashes.db
 
 # Full path for sleuthkit-4.x.x.jar built on Linux OS.
 # It is distributed a Windows only version with some optimization patches.

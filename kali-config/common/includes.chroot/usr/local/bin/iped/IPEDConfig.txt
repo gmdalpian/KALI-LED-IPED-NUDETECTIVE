@@ -26,6 +26,9 @@ enableLedDie = false
 # An attribute nsfw_nudity_score from 0 to 100 will be created.
 enableYahooNSFWDetection = false
 
+# [Experimental] Habilita o modulo de deteccao de arquivos com abuso sexual infantil usando IA
+enableCSAMDetectorTF = false
+
 # Enables QRcode detection and decoding
 enableQRCode = false
 
@@ -144,4 +147,4 @@ enableDocThumbs = false
 
 # Enables HTML report generation on automatic extractions or from selected items.
 # Generation settings can be modified in file "conf/HTMLReportConfig.txt"
-enableHTMLReport = true
+enableHTMLReport = true

@@ -65,11 +65,11 @@ MPlayer = mplayer
 #### Pasta Temporaria (necessaria para a extracao de cenas de videos), caminho completo ou relativo a pasta do LED. Obs: Usar "/" como separador de caminho. 
 PastaTemp = tmp
 
-#### Configuracao de extracao de cenas de videos, para VISUALIZACAO no programa, no formato <Largura em pixels de cada cena>,<Numero de colunas>,<Numero de linhas>. Quanto mais cenas/resolucao, mais lento o processo de extracao.
+#### Configuracao de extracao de cenas de videos, para VISUALIZACAO no programa, no formato <Tamanho em pixels de cada cena>,<Numero de colunas>,<Numero de linhas>. Quanto mais cenas/resolucao, mais lento o processo de extracao.
 MiniaturasVideosVisualizacao = 256,3,3
 
-#### Configuracao de extracao de cenas, utilizada quando arquivos de video sao EXPORTADOS (mesmo formato <Largura em Pixels>,<Colunas>,<Linhas>) na subpasta "miniaturas". Comentar para desabilitar. 
-MiniaturasVideosExportacao = 320,3,6
+#### Configuracao de extracao de cenas, utilizada quando arquivos de video sao EXPORTADOS (mesmo formato <Tamanho em Pixels>,<Colunas>,<Linhas>) na subpasta "miniaturas". Comentar para desabilitar. 
+MiniaturasVideosExportacao = 400,3,6
 
 #### Threads extracao de cenas de video. default = numero de processadores disponiveis, configuracao recomendada no Windows e maquinas com quantidade razoavel de memoria (>= 8 GB). No Linux, ou maquinas com pouca memoria, recomenda-se reduzir.
 ThreadsVideos = 1
