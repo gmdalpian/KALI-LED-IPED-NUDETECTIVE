@@ -34,7 +34,22 @@ done <<< "$(lsblk -l | grep part)"
 if [ -z "$triage" ]
 then
     echo "Nao localizou particao triage"
-        zenity --error --title="Nao localizou particao Triage!" --text="Para que seja executado corretamente este aplicativo, e necessario que no disco contendo o Kali haja uma particao denominada IPED-TRIAGE, no formato exFAT, conforme manual de uso." --width=300 --timeout=20
+    
+	zenity --error --title="Nao localizou particao Triage!" --text="Para que seja executado corretamente este aplicativo, e recomendavel que no disco contendo o Kali haja uma particao denominada IPED-TRIAGE, no formato exFAT, conforme manual de uso. Poderao ocorrer erros de estouro de memoria ao continuar o processamento." --width=300 --timeout=30      
+		
+    sudo rm -rf /home/kali/Desktop/IPED-CASO/
+
+    mkdir /home/kali/Desktop/IPED-CASO/		
+
+	sudo java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar -o /home/kali/Desktop/IPED-CASO/ -profile csam_triage -l /usr/local/bin/iped/palavras-chave.txt -d /media/
+
+	cp Ferramenta_de_Pesquisa.sh /home/kali/Desktop/IPED-CASO/
+	cp "IPED-Caso.desktop" /home/kali/Desktop/
+
+	cd /home/kali/Desktop/IPED-CASO/
+
+	./Ferramenta_de_Pesquisa.sh    
+	    
 else
     echo "Localizou a particao triage em /dev/$triage"
             
