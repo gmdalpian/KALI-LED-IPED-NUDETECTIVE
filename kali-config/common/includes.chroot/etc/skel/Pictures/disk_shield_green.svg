@@ -1,0 +1,11 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+<title>Icone de Proteção de Escrita do Disco (VERDE)</title>
+<!-- Fundo do disco (cinza claro) -->
+<circle cx="50" cy="50" r="45" fill="#CCCCCC" stroke="#444444" stroke-width="3"/>
+<!-- Centro do disco (cinza escuro) -->
+<circle cx="50" cy="50" r="15" fill="#222222"/>
+<!-- Escudo (Verde para simbolizar "Segurança") -->
+<path d="M50 25 L75 35 V65 L50 75 L25 65 V35 L50 25 Z" fill="#2ECC71" stroke="#1E8449" stroke-width="3"/>
+<!-- Marca de Verificação no Escudo -->
+<path d="M40 50 L48 58 L65 40" stroke="white" stroke-width="4" fill="none"/>
+</svg>

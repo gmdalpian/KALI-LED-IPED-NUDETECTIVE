@@ -32,7 +32,7 @@ else
     mkdir /home/kali/Desktop/triage
     sudo mount -o rw /dev/$triage /home/kali/Desktop/triage
    
-    mem_size=$(zenity --entry --title="Selecione o Tamanho da Memoria Swap" --text="Selecione o tamanho desejado para o arquivo de memoria a ser criado, em GB. \nRecomenda-se no minimo 4. Como o arquivo deve ser preenchido por zeros, \nesta operacao podera durar alguns minutos." --entry-text "4" --width=500)
+    mem_size=$(zenity --entry --title="Selecione o Tamanho da Memoria Swap" --text="Selecione o tamanho desejado para o arquivo de memoria a ser criado, em GB. \nRecomenda-se no minimo 4." --entry-text "4" --width=500)
     if [ $? = 0 ]
     then
         echo "Criando arquivo de memoria virtual swap..."

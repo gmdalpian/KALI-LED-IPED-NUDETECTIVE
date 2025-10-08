@@ -1,0 +1,1 @@
+RUN+="/usr/bin/sh -c '/usr/bin/lsblk -n -r -o NAME /dev/%k | while read DEV_NAME; do /sbin/blockdev --setro /dev/$DEV_NAME; done'"

@@ -17,10 +17,13 @@ echo "Monta automaticamente as unidades reconhecidas como somente leitura"
 while read line ; do
         disk=`echo "$line" | awk '{print $1}'`
         if ! echo "$disk" | grep -q "$root_system"
-        then           
-           sudo mkdir /media/$disk
-           sudo blockdev --setro /dev/$disk
-           sudo mount -o ro /dev/$disk /media/$disk
+        then                      
+           #sudo blockdev --setro /dev/$disk -- comando movido para a função /etc/udev/rules.d e aplicativo
+		   # Testa se o disco ja nao esta montado antes de montar novamente
+		   if ! findmnt --mountpoint /media/$disk &> /dev/null; then
+		       sudo mkdir /media/$disk
+               sudo mount -o ro /dev/$disk /media/$disk
+		    fi
         fi
 done <<< "$(lsblk -l | grep 'part\|disk\|rom')"
 
@@ -33,8 +36,11 @@ while read line ; do
 	if [[ ! -z $line ]]
 	then
 	        ldmdisk=`echo "$line" | awk '{print $1}'`
-        	sudo mkdir /media/$ldmdisk
-	        sudo mount -o ro /dev/mapper/$ldmdisk /media/$ldmdisk
+			# Testa se o disco ja nao esta montado antes de montar novamente
+			if ! findmnt --mountpoint /media/$ldmdisk &> /dev/null; then
+        	    sudo mkdir /media/$ldmdisk
+	            sudo mount -o ro /dev/mapper/$ldmdisk /media/$ldmdisk
+		    fi
 	fi
 done <<< "$(lsblk -l | grep '\dm\b')"
 
