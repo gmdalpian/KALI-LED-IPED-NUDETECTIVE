@@ -1,1 +1,8 @@
+# Regra Udev (Aprimorada) para Ignorar o Disco de Boot COMPLETO
+# 
+# A regra agora verifica se o DISCO RAIZ do dispositivo sendo adicionado é o mesmo 
+# que contém o volume montado em /run/live/medium. Se for o mesmo disco, a regra é ignorada.
+
+SUBSYSTEM=="block", ACTION=="add", KERNEL!="sd[a-z][0-9]|nvme*p[0-9]|sr*", \
+ENV{DEVNAME}!="/dev/sr0", \
 RUN+="/usr/bin/sh -c '/usr/bin/lsblk -n -r -o NAME /dev/%k | while read DEV_NAME; do /sbin/blockdev --setro /dev/$DEV_NAME; done'"

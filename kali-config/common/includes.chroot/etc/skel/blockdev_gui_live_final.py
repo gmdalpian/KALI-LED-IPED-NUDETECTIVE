@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Gerenciador de Dispositivos de Bloco para Ambientes Live (Kali/Outros)
@@ -13,6 +14,8 @@
 import sys
 import subprocess
 import os
+import json
+import math # Importado para formatação de tamanho
 
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
@@ -22,18 +25,18 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QIcon
 
-# --- CONFIGURAÇÕES DE CAMINHO ---
-# O script precisa ter acesso de escrita ao arquivo .desktop para atualizar o ícone/nome.
+# --- CONSTANTES DE CONFIGURAÇÃO ---
 ICON_DIR = "/home/kali/Pictures/"
 DESKTOP_FILE_PATH = "/home/kali/Desktop/Disk_Shield.desktop"
 ICON_GREEN = "disk_shield_green.svg"
 ICON_RED = "disk_shield_red.svg"
-# ------------------------------
+# -----------------------------------
 
 class BlockDeviceManager(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Gerenciador de Bloqueio de Escrita de Blocos - MODO LIVE")
+        self.setWindowTitle("Gerenciador de Bloqueio de Bloco - MODO LIVE")
+        self.setMinimumWidth(650) # Aumenta a largura mínima da janela
         self.boot_device = self.get_boot_device()
         self.setup_ui()
         self.load_devices()
@@ -74,17 +77,35 @@ class BlockDeviceManager(QWidget):
         
         self.device_list.itemSelectionChanged.connect(self.update_buttons)
         
+    def _format_size_bytes(self, size_bytes):
+        """Converte tamanho em bytes para GB, TB, etc. (IEC units)"""
+        if not size_bytes or size_bytes == 0:
+            return "0 B"
+        
+        size = int(size_bytes)
+        # Unidades: B, KiB, MiB, GiB, TiB
+        units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+        # log2(1024) = 10
+        i = int(math.floor(math.log(size, 1024)))
+        
+        # Garante que não ultrapasse o índice de unidades
+        if i >= len(units):
+            i = len(units) - 1
+            
+        p = math.pow(1024, i)
+        s = round(size / p, 1)
+        
+        return f"{s} {units[i]}"
+
+
     def _update_desktop_icon(self, is_secure):
         """
-        Atualiza o ícone e o nome no arquivo .desktop na área de trabalho.
-        Requer privilégios de root para escrita no arquivo (via 'sudo sed').
+        Atualiza o ícone e o nome no arquivo .desktop na área de trabalho usando 'sudo sed'.
         """
         icon_file = ICON_GREEN if is_secure else ICON_RED
         icon_path = ICON_DIR + icon_file
         
-        # O nome do atalho indica a PRÓXIMA ação ou o estado de ALERTA.
-        # Se is_secure=True (tudo RO), o nome deve ser "Liberar Escrita" (para a próxima ação).
-        # Se is_secure=False (algo RW), o nome deve ser "Bloquear Escrita" (para alertar).
+        # O nome do atalho indica a PRÓXIMA ação (ex: se está seguro, a próxima ação é Liberar).
         next_action_name = "Liberar Escrita" if is_secure else "Bloquear Escrita"
         
         try:
@@ -99,10 +120,16 @@ class BlockDeviceManager(QWidget):
                 check=True, capture_output=True, text=True
             )
             
+            # Comando 3: Chama o script externo para setar a confiança no desktop.
+            subprocess.run(
+                ["/bin/bash", "/etc/profile.d/trust_desktop_icons.sh"],
+                check=True, capture_output=True, text=True
+            )
+ 
+            
         except subprocess.CalledProcessError as e:
-            # A falha aqui geralmente significa que o script não foi executado com 'sudo' ou o caminho está errado.
             print(f"AVISO: Falha ao atualizar o arquivo .desktop ({e.stderr.strip()}). Verifique se o script foi executado com sudo e se o caminho está correto.")
-            pass # Continua a execução mesmo com a falha
+            pass
 
     def get_boot_device(self):
         """Identifica o dispositivo de bloco raiz do boot Live em /run/live/medium."""
@@ -117,8 +144,7 @@ class BlockDeviceManager(QWidget):
             if not source:
                 return None
             
-            # 2. Verifica se o device é um disco completo (ex: /dev/sr0) ou uma partição (/dev/sdb1)
-            # Se for uma partição, busca o dispositivo pai (PKNAME).
+            # 2. Se for uma partição, busca o dispositivo pai (PKNAME).
             result_parent = subprocess.run(
                 ["lsblk", "-n", "-o", "PKNAME", source],
                 capture_output=True, text=True, check=True
@@ -128,14 +154,31 @@ class BlockDeviceManager(QWidget):
             if parent_name:
                 return parent_name # Retorna o nome do pai (ex: sdb)
             
-            # Se não houver pai (PKNAME é vazio, caso de sr0/loop), retorna o nome do dispositivo (ex: sr0)
-            # Remove /dev/ prefixo se existir
+            # 3. Se não houver pai, retorna o nome do dispositivo (ex: sr0)
             return source.replace("/dev/", "")
             
         except subprocess.CalledProcessError:
             return None
         except Exception:
             return None
+            
+    def _get_ro_status(self, device_name):
+        """
+        Obtém o status real de Somente Leitura (1=RO, 0=RW) usando blockdev --getro.
+        Requer sudo.
+        """
+        try:
+            result = subprocess.run(
+                ["sudo", "blockdev", "--getro", f"/dev/{device_name}"],
+                capture_output=True, text=True, check=True
+            )
+            # blockdev --getro retorna 1 (RO) ou 0 (RW) na saída padrão
+            return result.stdout.strip()
+        except subprocess.CalledProcessError:
+            # Se o comando falhar (dispositivo inválido ou sem permissão), assume RW por segurança
+            return "0" 
+        except Exception:
+            return "0"
 
     def update_buttons(self):
         """Habilita/desabilita os botões de acordo com a seleção."""
@@ -144,36 +187,55 @@ class BlockDeviceManager(QWidget):
         self.unblock_button.setEnabled(is_selected)
 
     def get_block_devices(self):
-        """Retorna detalhes dos dispositivos de bloco, excluindo o de boot."""
+        """
+        Retorna detalhes dos dispositivos de bloco usando JSON,
+        incluindo o rótulo (LABEL) da maior partição para identificação.
+        O status RO é obtido diretamente do blockdev para consistência.
+        """
         devices = []
         try:
-            # Comando lsblk com colunas para: NOME, SOMENTE LEITURA, TAMANHO, MODELO/ID
+            # Executa lsblk para obter a lista hierárquica completa em JSON
+            # Pedimos o tamanho em BYTES (-b) para formatar corretamente.
             result = subprocess.run(
-                ["lsblk", "-d", "-n", "-o", "NAME,RO,SIZE,MODEL"],
+                ["lsblk", "-J", "-b", "-o", "NAME,SIZE,MODEL,LABEL,TYPE"],
                 capture_output=True, text=True, check=True
             )
+            data = json.loads(result.stdout)
             
-            for line in result.stdout.strip().split('\n'):
-                parts = line.split()
-                if len(parts) >= 3 and not parts[0].startswith("loop"):
-                    name = parts[0]
+            for disk in data.get('blockdevices', []):
+                # Filtra apenas discos principais (type='disk') e exclui o de boot
+                if disk.get('type') == 'disk' and disk.get('name') != self.boot_device:
                     
-                    # Exclui o dispositivo de boot
-                    if name == self.boot_device:
-                        continue 
-
-                    ro_status = parts[1]
-                    size = parts[2]
-                    model = " ".join(parts[3:]) if len(parts) > 3 else "N/A"
+                    # *** Lógica para encontrar o rótulo da maior partição ***
+                    max_partition_size = 0
+                    partition_label = "N/A"
+                    
+                    for child in disk.get('children', []):
+                        if child.get('type') == 'part':
+                            # Tamanho em bytes
+                            size_bytes = int(child.get('size', 0))
+                            if size_bytes > max_partition_size:
+                                max_partition_size = size_bytes
+                                # Captura o rótulo, se disponível
+                                label = child.get('label')
+                                partition_label = f"[{label}]" if label else "Sem Rótulo"
+                                
+                    
+                    # *** OBTÉM O STATUS RO REAL USANDO blockdev ***
+                    ro_status = self._get_ro_status(disk.get('name'))
+                    
+                    # *** Formatação do Tamanho do Disco Principal ***
+                    disk_size_display = self._format_size_bytes(disk.get('size'))
                     
                     devices.append({
-                        "name": name,
+                        "name": disk.get('name'),
                         "ro_status": ro_status,
-                        "size": size,
-                        "model": model.strip()
+                        "size": disk_size_display,
+                        "model": disk.get('model', 'N/A'),
+                        "partition_label": partition_label
                     })
         except Exception as e:
-            QMessageBox.critical(self, "Erro", f"Erro ao listar dispositivos: {e}")
+            QMessageBox.critical(self, "Erro de Listagem", f"Falha ao processar lista de dispositivos: {e}")
         return devices
 
     def load_devices(self):
@@ -181,17 +243,16 @@ class BlockDeviceManager(QWidget):
         self.device_list.clear()
         devices = self.get_block_devices()
         
-        # --- Lógica de Estado Global ---
         is_global_secure = True # Assume que está seguro (todos RO)
-        # ------------------------------
 
         for dev in devices:
             name = dev["name"]
             ro_status = dev["ro_status"]
             size = dev["size"]
             model = dev["model"]
+            partition_label = dev["partition_label"]
             
-            # 1. Determina o status e a cor
+            # 1. Determina o status e a cor (baseado na leitura REAL do blockdev)
             if ro_status == "1":
                 status = "BLOQUEADO (Somente Leitura - RO)"
                 color = QColor("green")
@@ -200,10 +261,10 @@ class BlockDeviceManager(QWidget):
                 color = QColor("red")
                 is_global_secure = False # Se um estiver RW, o estado não é seguro
             
-            # 2. Formata o texto para a lista
+            # 2. Formata o texto para a lista (Mostra o rótulo da maior partição)
             item_text = (
                 f"/dev/{name} | Status: {status}\n"
-                f"   Tamanho: {size} | Modelo: {model}"
+                f"   Tamanho: {size} | Partição: {partition_label} | Modelo: {model}"
             )
             item = QListWidgetItem(item_text)
             
@@ -215,10 +276,10 @@ class BlockDeviceManager(QWidget):
             self.device_list.addItem(item)
             
         self.update_buttons()
-        # Atualiza o ícone da aplicação
+        # Atualiza o ícone da aplicação e o atalho do desktop
         self.setWindowIcon(QIcon(ICON_DIR + (ICON_GREEN if is_global_secure else ICON_RED)))
-        # Atualiza o ícone e nome do atalho na área de trabalho
         self._update_desktop_icon(is_global_secure)
+
 
     def _get_all_targets(self, device_name):
         """Retorna o dispositivo pai e todas as suas partições (filhas) usando lsblk."""
@@ -308,7 +369,7 @@ class BlockDeviceManager(QWidget):
         self.load_devices() # Recarrega para mostrar o novo status, cor, e estado global
 
 if __name__ == "__main__":
-    # Verifica as dependências 'lsblk', 'findmnt' e 'blockdev'
+    # Verifica as dependências
     missing_commands = []
     for cmd in ["lsblk", "findmnt", "blockdev"]:
         if not (os.path.exists(f"/usr/bin/{cmd}") or os.path.exists(f"/bin/{cmd}") or os.path.exists(f"/sbin/{cmd}")):

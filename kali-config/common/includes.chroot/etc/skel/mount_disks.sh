@@ -20,10 +20,10 @@ while read line ; do
         then                      
            #sudo blockdev --setro /dev/$disk -- comando movido para a função /etc/udev/rules.d e aplicativo
 		   # Testa se o disco ja nao esta montado antes de montar novamente
-		   if ! findmnt --mountpoint /media/$disk &> /dev/null; then
-		       sudo mkdir /media/$disk
-               sudo mount -o ro /dev/$disk /media/$disk
-		    fi
+	    if ! findmnt --mountpoint /media/$disk &> /dev/null; then
+		sudo mkdir /media/$disk
+                sudo mount -o ro /dev/$disk /media/$disk
+            fi
         fi
 done <<< "$(lsblk -l | grep 'part\|disk\|rom')"
 
@@ -59,7 +59,10 @@ while read line ; do
 			sudo dislocker -V /dev/$disk -- /dislocker/bitlocker_$disk -r
 			if sudo test -f /dislocker/bitlocker_$disk/dislocker-file;
 			then
-				sudo mount -o loop,ro /dislocker/bitlocker_$disk/dislocker-file /media/decrypted_$disk -t ntfs
+				# verifica primeiro se o disco ja nao foi montado
+				if ! findmnt --mountpoint /media/decrypted_$disk &> /dev/null; then
+					sudo mount -o loop,ro /dislocker/bitlocker_$disk/dislocker-file /media/decrypted_$disk -t ntfs
+				fi
 			else
 				while true; do
 					#pega as informacoes do bitlocker e salva na variavel BITLOCKER_INFO
