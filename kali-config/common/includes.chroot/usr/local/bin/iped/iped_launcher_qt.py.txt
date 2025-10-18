@@ -2,11 +2,12 @@
 #
 # iped_launcher_qt.py
 # Interface gráfica em Python/PyQt6 no formato "Wizard" (Assistente).
-# (Versão final com botão de Ajuda)
+# (Versão com filtro de disco de boot aprimorado)
 #
 import sys
 import os
 import subprocess
+import re # Importar regex para extrair o nome base do disco
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QPushButton, QLabel, QLineEdit, QFileDialog, QMessageBox, 
@@ -18,12 +19,12 @@ from PyQt6.QtCore import Qt, QSize
 # --- Dicionários de Descrição (REORDENADOS E ATUALIZADOS) ---
 PROFILE_INFO = {
     "csam_triage": {
-        "title": "CSAM-Triage",
+        "title": "CSAM-Triage (Recomendado)",
         "icon": "security-high",
-        "description": "<b>Perfil otimizado para detecção de CSAM (arquivos contendo abuso sexual infantil)</b>. Inclui modelos de IA (CNN) para detecção de arquivos desconhecidos e verificação de hashes para arquivos conhecidos."
+        "description": "<b>Perfil otimizado para detecção de CSAM (Recomendado)</b>. Inclui modelos de IA (CNN), verificação de hashes (Project Vic) e busca por assinaturas específicas."
     },
     "triage": {
-        "title": "Triage (Documentos, emails, etc.)",
+        "title": "Triage (Completo)",
         "icon": "system-search",
         "description": "<b>Perfil de triagem padrão</b>. Mais completo, inclui <i>carving</i> de arquivos deletados e extrai um conjunto maior de metadados."
     },
@@ -36,14 +37,14 @@ PROFILE_INFO = {
 
 TARGET_INFO = {
     "mounted_files": {
-        "title": "Arquivos Ativos (Recomendado)",
+        "title": "Arquivos Montados (Recomendado)",
         "icon": "folder-remote",
         "description": "<b>Processa apenas os arquivos visíveis (Recomendado)</b>. Analisa todos os arquivos nos diretórios montados (ex: /media/). É a opção mais rápida e segura para a maioria das triagens."
     },
     "all_disks": {
         "title": "Discos (Completo/Lento)",
         "icon": "drive-harddisk",
-        "description": "<b>Processa todos os dispositivos</b>: discos físicos, partições, volumes LDM (RAID), VSS (Shadow Copies) e BitLocker. É o método mais completo, recupera arquivos apagados, porém é mais lento, ."
+        "description": "<b>Processa todos os dispositivos</b>: discos físicos, partições, volumes LDM (RAID), VSS (Shadow Copies) e BitLocker. É o método mais completo, porém *muito mais lento*."
     },
     "manual_dir": {
         "title": "Selecionar Diretório/Imagem",
@@ -109,9 +110,15 @@ class App(QMainWindow):
         self.title_label = QLabel("Passo 1 de 2: Selecione o Modo de Processamento")
         self.title_label.setObjectName("TitleLabel")
         
-        # --- MODIFICAÇÃO: Botão de Ajuda ---
         title_bar_layout.addWidget(self.title_label) # Título à esquerda
-        title_bar_layout.addStretch() # Empurra o botão de ajuda para a direita
+        title_bar_layout.addStretch() # Empurra os botões para a direita
+        
+        self.sys_info_button = QToolButton()
+        self.sys_info_button.setIcon(QIcon.fromTheme("utilities-system-monitor")) # Ícone de info
+        self.sys_info_button.setObjectName("SysInfoButton") # Para QSS
+        self.sys_info_button.setToolTip("Ver Informações do Sistema")
+        self.sys_info_button.clicked.connect(self.show_system_info)
+        title_bar_layout.addWidget(self.sys_info_button)
         
         self.help_button = QToolButton()
         self.help_button.setIcon(QIcon.fromTheme("help-contents")) # Ícone padrão de ajuda
@@ -119,7 +126,6 @@ class App(QMainWindow):
         self.help_button.setToolTip("Abrir Manual de Uso")
         self.help_button.clicked.connect(self.open_help_manual)
         title_bar_layout.addWidget(self.help_button)
-        # --- FIM DA MODIFICAÇÃO ---
         
         main_layout.addWidget(title_bar)
 
@@ -177,7 +183,6 @@ class App(QMainWindow):
         
         self.profile_group = QButtonGroup(self)
         self.profile_buttons = {}
-        # O loop agora cria os botões na ordem de PROFILE_INFO (CSAM primeiro)
         for key, info in PROFILE_INFO.items():
             btn = self.create_icon_button(info['icon'])
             btn.setProperty("key", key)
@@ -185,7 +190,6 @@ class App(QMainWindow):
             self.profile_buttons[key] = btn
             left_layout.addWidget(btn)
         
-        # --- PADRÃO ALTERADO ---
         self.profile_buttons["csam_triage"].setChecked(True)
         self.profile_group.buttonToggled.connect(self.update_profile_details)
         page_layout.addWidget(left_col)
@@ -230,7 +234,6 @@ class App(QMainWindow):
 
         self.target_group = QButtonGroup(self)
         self.target_buttons = {}
-        # O loop agora cria os botões na ordem de TARGET_INFO (Arquivos Montados primeiro)
         for key, info in TARGET_INFO.items():
             btn = self.create_icon_button(info['icon'])
             btn.setProperty("key", key)
@@ -238,7 +241,6 @@ class App(QMainWindow):
             self.target_buttons[key] = btn
             left_layout.addWidget(btn)
             
-        # --- PADRÃO ALTERADO ---
         self.target_buttons["mounted_files"].setChecked(True)
         self.target_group.buttonToggled.connect(self.update_target_details)
         page_layout.addWidget(left_col)
@@ -328,21 +330,18 @@ class App(QMainWindow):
                 font-weight: bold;
                 color: white;
             }
-            /* --- QSS PARA BOTÃO DE AJUDA --- */
-            QToolButton#HelpButton {
+            QToolButton#HelpButton, QToolButton#SysInfoButton {
                 background-color: transparent;
                 border: none;
                 border-radius: 4px;
                 padding: 5px;
             }
-            QToolButton#HelpButton::icon {
-                /* Garante que o ícone do tema seja branco */
+            QToolButton#HelpButton::icon, QToolButton#SysInfoButton::icon {
                 color: white; 
             }
-            QToolButton#HelpButton:hover {
-                background-color: #546e7a; /* Cinza um pouco mais claro */
+            QToolButton#HelpButton:hover, QToolButton#SysInfoButton:hover {
+                background-color: #546e7a;
             }
-            /* --- FIM DO QSS DE AJUDA --- */
             QFrame#NavBar {
                 background-color: #eceff1; /* Cinza claro */
                 border-top: 1px solid #cfd8dc;
@@ -430,7 +429,6 @@ class App(QMainWindow):
             }
         """)
 
-    # --- FUNÇÃO NOVA ---
     def open_help_manual(self):
         """Abre o manual PDF em uma nova janela."""
         manual_path = "/home/kali/Desktop/Manual de Uso KALI-LED-IPED-NUDETECTIVE.pdf"
@@ -441,12 +439,165 @@ class App(QMainWindow):
             return
             
         try:
-            # xdg-open é o comando padrão do Linux para abrir arquivos
-            # com o aplicativo associado (não-bloqueante).
             subprocess.Popen(['xdg-open', manual_path])
         except Exception as e:
             QMessageBox.critical(self, "Erro ao Abrir Manual",
                                  f"Não foi possível abrir o manual.\nVerifique se 'xdg-open' está instalado.\n\nErro: {e}")
+                                 
+    def show_system_info(self):
+        """Coleta e exibe as informações do sistema em um diálogo."""
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            info_text = self._gather_system_info()
+            
+            QApplication.restoreOverrideCursor()
+            
+            dialog = QMessageBox(self)
+            dialog.setWindowTitle("Informações do Sistema")
+            dialog.setIcon(QMessageBox.Icon.Information)
+            
+            dialog.setTextFormat(Qt.TextFormat.RichText)
+            # Aumentar um pouco a largura padrão da caixa de mensagem
+            dialog.setStyleSheet("QMessageBox { messagebox-width: 600px; }")
+            dialog.setText(f"<pre>{info_text}</pre>")
+            dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
+            dialog.exec()
+            
+        except Exception as e:
+            QApplication.restoreOverrideCursor()
+            QMessageBox.critical(self, "Erro", f"Falha ao coletar informações do sistema: {e}")
+
+    # --- FUNÇÃO _gather_system_info (MODIFICADA) ---
+    def _gather_system_info(self):
+        """Executa comandos no shell para coletar informações."""
+        info = []
+        
+        def run_cmd(cmd):
+            try:
+                env = os.environ.copy()
+                env['LANG'] = 'C' # Garante saída em inglês
+                return subprocess.run(cmd, capture_output=True, text=True, timeout=5, check=True, env=env).stdout.strip()
+            except subprocess.CalledProcessError as e:
+                return f"Erro ao executar '{' '.join(cmd)}': {e.stderr}"
+            except FileNotFoundError:
+                return f"Comando '{cmd[0]}' não encontrado."
+            except Exception as e:
+                return f"Erro: {e}"
+
+        # 1. CPU
+        cpu_output = run_cmd(['lscpu'])
+        cpu_model = "Não disponível"
+        for line in cpu_output.split('\n'):
+            if line.startswith("Model name:"):
+                cpu_model = line.split(":", 1)[1].strip()
+                break
+        info.append(f"CPU: {cpu_model}")
+
+        # 2. RAM (CORRIGIDO)
+        ram_output = run_cmd(['grep', 'MemTotal', '/proc/meminfo'])
+        ram_total = "Não disponível"
+        if not ram_output.startswith("Erro") and not ram_output.startswith("Comando"):
+            try:
+                mem_kb = int(ram_output.split()[1])
+                mem_gb = mem_kb / (1024 * 1024) # Converte KiB para GiB
+                ram_total = f"{mem_gb:.1f} GB"
+            except Exception as e:
+                ram_total = f"Erro ao parsear: {e}"
+        else:
+            ram_total = ram_output
+        info.append(f"Memória RAM Total: {ram_total}")
+
+        # 3. Discos e Partições (MODIFICADO COM FILTRO APRIMORADO)
+        info.append("\nDiscos e Partições (Ignorando disco de boot):")
+        info.append("="*40)
+
+        boot_disk_to_ignore = "" # Armazena o nome a ser ignorado (ex: sdb ou sr0)
+        try:
+            boot_device_full = run_cmd(['findmnt', '-n', '-o', 'SOURCE', '--target', '/run/live/medium'])
+            
+            if boot_device_full and not boot_device_full.startswith("Erro"):
+                # Remove o prefixo /dev/ se existir
+                boot_device_base = os.path.basename(boot_device_full) 
+                
+                # Tenta pegar o nome do disco pai (PKNAME)
+                boot_disk_parent = run_cmd(['lsblk', '-n', '-o', 'PKNAME', f'/dev/{boot_device_base}'])
+                
+                if boot_disk_parent and not boot_disk_parent.startswith("Erro"):
+                    # Se achou um pai (ex: sdb), ignora o pai
+                    boot_disk_to_ignore = boot_disk_parent
+                    info.append(f"(Ignorando disco de boot: {boot_disk_to_ignore})")
+                else:
+                    # Se não achou pai (ex: sr0), ignora o próprio dispositivo base
+                    # Precisamos remover números de partição, se houver (ex: sdb1 -> sdb)
+                    match = re.match(r'([a-zA-Z]+)', boot_device_base)
+                    if match:
+                         boot_disk_to_ignore = match.group(1)
+                         info.append(f"(Ignorando dispositivo de boot: {boot_disk_to_ignore})")
+                    else:
+                        boot_disk_to_ignore = boot_device_base # Fallback
+                        info.append(f"(Ignorando dispositivo de boot: {boot_disk_to_ignore})")
+
+            else:
+                 info.append("(Não foi possível identificar o dispositivo de boot, mostrando tudo.)")
+        except Exception as e:
+            info.append(f"(Erro ao identificar disco de boot: {e})")
+            boot_disk_to_ignore = "" # Garante que não filtre nada em caso de erro
+
+        # Pega a saída do lsblk em formato de lista
+        disk_output_raw = run_cmd(['lsblk', '-l', '-o', 'NAME,SIZE,FSTYPE,TYPE,MOUNTPOINT'])
+        
+        filtered_disk_output = []
+        header = True
+        for line in disk_output_raw.split('\n'):
+            # Adiciona o cabeçalho
+            if header:
+                filtered_disk_output.append(line)
+                header = False
+                continue
+                
+            try:
+                # Pega a primeira coluna (nome do dispositivo)
+                name_col = line.split()[0]
+            except IndexError:
+                continue # Linha vazia ou mal formatada
+
+            # Regra 1: Ignorar loop devices
+            if name_col.startswith('loop'):
+                continue
+                
+            # Regra 2: Ignorar o disco de boot e suas partições
+            if boot_disk_to_ignore and name_col.startswith(boot_disk_to_ignore):
+                continue
+            
+            # Se passou pelos filtros, adiciona a linha
+            filtered_disk_output.append(line)
+        
+        # Se nenhuma linha de dados foi adicionada, informa
+        if len(filtered_disk_output) <= 1: 
+             info.append("Nenhum disco detectado (além do disco de boot).")
+        else:
+            info.append("\n".join(filtered_disk_output))
+        # --- FIM DA MODIFICAÇÃO DO LSBLK ---
+        
+        # 4. BitLocker (tentativa sem senha)
+        info.append("\nPartições BitLocker:")
+        info.append("="*40)
+        try:
+            bitlocker_result = subprocess.run(
+                ['sudo', '-n', 'dislocker-find'], 
+                capture_output=True, text=True, timeout=5
+            )
+            if bitlocker_result.returncode == 0:
+                bitlocker_output = bitlocker_result.stdout.strip()
+                info.append(bitlocker_output if bitlocker_output else "Nenhuma partição BitLocker encontrada.")
+            else:
+                info.append("Falha ao verificar (requer privilégios de root\n ou 'sudo' está pedindo senha).")
+        except FileNotFoundError:
+            info.append("Comando 'dislocker-find' não encontrado.")
+        except Exception as e:
+            info.append(f"Erro ao executar dislocker-find: {e}")
+
+        return "\n".join(info)
 
     # --- Funções de Evento e Navegação ---
 
@@ -456,7 +607,6 @@ class App(QMainWindow):
         self.back_button.setVisible(False)
         self.next_button.setVisible(True)
         self.start_button.setVisible(False)
-        # Atualiza os detalhes para o item selecionado (novo padrão)
         self.update_profile_details(self.profile_buttons[self.selected_profile], True)
 
     def go_to_page_2(self):
@@ -465,7 +615,6 @@ class App(QMainWindow):
         self.back_button.setVisible(True)
         self.next_button.setVisible(False)
         self.start_button.setVisible(True)
-        # Atualiza os detalhes para o item selecionado (novo padrão)
         self.update_target_details(self.target_buttons[self.selected_target], True)
 
     def update_profile_details(self, button, checked):
@@ -524,7 +673,6 @@ class App(QMainWindow):
         path = self.manual_selected_path
 
         if self.selected_target == "manual_dir" and (not path or path == "/media"):
-            # Verifica se o caminho ainda é o padrão
             QMessageBox.critical(self, "Erro de Validação", 
                                  "Nenhum caminho foi selecionado para o modo manual.\nPor favor, selecione um diretório ou arquivo.")
             return
