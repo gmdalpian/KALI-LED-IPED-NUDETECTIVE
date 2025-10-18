@@ -1,0 +1,563 @@
+#!/usr/bin/env python3
+#
+# iped_launcher_qt.py
+# Interface gráfica em Python/PyQt6 no formato "Wizard" (Assistente).
+# (Versão final com botão de Ajuda)
+#
+import sys
+import os
+import subprocess
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+    QPushButton, QLabel, QLineEdit, QFileDialog, QMessageBox, 
+    QFrame, QButtonGroup, QToolButton, QSizePolicy, QStackedWidget
+)
+from PyQt6.QtGui import QIcon, QFont, QPixmap
+from PyQt6.QtCore import Qt, QSize
+
+# --- Dicionários de Descrição (REORDENADOS E ATUALIZADOS) ---
+PROFILE_INFO = {
+    "csam_triage": {
+        "title": "CSAM-Triage",
+        "icon": "security-high",
+        "description": "<b>Perfil otimizado para detecção de CSAM (arquivos contendo abuso sexual infantil)</b>. Inclui modelos de IA (CNN) para detecção de arquivos desconhecidos e verificação de hashes para arquivos conhecidos."
+    },
+    "triage": {
+        "title": "Triage (Documentos, emails, etc.)",
+        "icon": "system-search",
+        "description": "<b>Perfil de triagem padrão</b>. Mais completo, inclui <i>carving</i> de arquivos deletados e extrai um conjunto maior de metadados."
+    },
+    "fastmode": {
+        "title": "FastMode (Rápido)",
+        "icon": "preferences-system-performance",
+        "description": "<b>Perfil mais rápido</b>, focado apenas em artefatos comuns (fotos, vídeos, chats) e indexação. Ideal para uma análise *muito* rápida."
+    }
+}
+
+TARGET_INFO = {
+    "mounted_files": {
+        "title": "Arquivos Ativos (Recomendado)",
+        "icon": "folder-remote",
+        "description": "<b>Processa apenas os arquivos visíveis (Recomendado)</b>. Analisa todos os arquivos nos diretórios montados (ex: /media/). É a opção mais rápida e segura para a maioria das triagens."
+    },
+    "all_disks": {
+        "title": "Discos (Completo/Lento)",
+        "icon": "drive-harddisk",
+        "description": "<b>Processa todos os dispositivos</b>: discos físicos, partições, volumes LDM (RAID), VSS (Shadow Copies) e BitLocker. É o método mais completo, recupera arquivos apagados, porém é mais lento, ."
+    },
+    "manual_dir": {
+        "title": "Selecionar Diretório/Imagem",
+        "icon": "folder-saved-search",
+        "description": "<b>Permite escolher manualmente</b> um diretório específico ou um único arquivo de imagem forense (como .E01, .dd, .vmdk) para ser processado."
+    }
+}
+
+# Filtro de arquivos de imagem forense
+FORENSIC_IMAGE_FILTER = "Imagens Forenses (*.E01 *.Ex01 *.e01 *.ex01 *.dd *.raw *.img *.vmdk *.vhd *.AFF);;Todos os Arquivos (*)"
+
+class App(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Assistente de Processamento Forense IPED")
+        self.setFixedSize(800, 500)
+        
+        # --- Caminho do Script Executor ---
+        self.script_dir = os.path.dirname(os.path.realpath(__file__))
+        self.executor_script = os.path.join(self.script_dir, "iped_executor.sh")
+
+        # --- NOVOS PADRÕES ---
+        self.selected_profile = "csam_triage" # Padrão
+        self.selected_target = "mounted_files"  # Padrão
+        
+        # --- Variável para armazenar o caminho manual ---
+        self.manual_selected_path = "/media" # Pré-preenchido
+
+        self.init_ui()
+        self.load_stylesheet()
+        self.go_to_page_1() 
+        self.center_window() # Centraliza a janela
+
+    def center_window(self):
+        """Centraliza a janela na tela principal."""
+        if self.screen():
+            screen_geo = self.screen().availableGeometry()
+            window_geo = self.frameGeometry()
+            self.move(screen_geo.center() - window_geo.center())
+
+    def init_ui(self):
+        # --- Carregar Ícone da Aplicação ---
+        app_icon_path = os.path.join(self.script_dir, "analisador.png")
+        if os.path.exists(app_icon_path):
+            self.setWindowIcon(QIcon(app_icon_path))
+        else:
+            print("Aviso: Ícone 'analisador.png' não encontrado. Usando ícone padrão.")
+            self.setWindowIcon(QIcon.fromTheme("applications-utilities"))
+            
+        # --- Widget Central e Layout Principal ---
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setSpacing(0)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+
+        # --- Título Superior ---
+        title_bar = QFrame()
+        title_bar.setObjectName("TitleBar")
+        title_bar_layout = QHBoxLayout(title_bar)
+        
+        self.title_label = QLabel("Passo 1 de 2: Selecione o Modo de Processamento")
+        self.title_label.setObjectName("TitleLabel")
+        
+        # --- MODIFICAÇÃO: Botão de Ajuda ---
+        title_bar_layout.addWidget(self.title_label) # Título à esquerda
+        title_bar_layout.addStretch() # Empurra o botão de ajuda para a direita
+        
+        self.help_button = QToolButton()
+        self.help_button.setIcon(QIcon.fromTheme("help-contents")) # Ícone padrão de ajuda
+        self.help_button.setObjectName("HelpButton") # Para QSS
+        self.help_button.setToolTip("Abrir Manual de Uso")
+        self.help_button.clicked.connect(self.open_help_manual)
+        title_bar_layout.addWidget(self.help_button)
+        # --- FIM DA MODIFICAÇÃO ---
+        
+        main_layout.addWidget(title_bar)
+
+        # --- Stack de Páginas ---
+        self.stacked_widget = QStackedWidget()
+        
+        # Criar e adicionar as páginas
+        self.page_1 = self.create_page_1()
+        self.page_2 = self.create_page_2()
+        self.stacked_widget.addWidget(self.page_1)
+        self.stacked_widget.addWidget(self.page_2)
+        
+        main_layout.addWidget(self.stacked_widget)
+
+        # --- Barra de Navegação Inferior ---
+        nav_bar = QFrame()
+        nav_bar.setObjectName("NavBar")
+        nav_layout = QHBoxLayout(nav_bar)
+        
+        self.exit_button = QPushButton("Sair")
+        self.exit_button.clicked.connect(self.close)
+        
+        nav_layout.addWidget(self.exit_button)
+        nav_layout.addStretch() # Espaço flexível
+
+        self.back_button = QPushButton("Voltar")
+        self.back_button.clicked.connect(self.go_to_page_1)
+        
+        self.next_button = QPushButton("Próximo")
+        self.next_button.setObjectName("NextButton") # Botão de destaque
+        self.next_button.clicked.connect(self.go_to_page_2)
+        
+        self.start_button = QPushButton(" Iniciar Processamento")
+        self.start_button.setObjectName("StartButton")
+        self.start_button.setIcon(QIcon.fromTheme("system-run"))
+        self.start_button.clicked.connect(self.start_processing)
+        
+        nav_layout.addWidget(self.back_button)
+        nav_layout.addWidget(self.next_button)
+        nav_layout.addWidget(self.start_button)
+        
+        main_layout.addWidget(nav_bar)
+        
+    def create_page_1(self):
+        """Cria a página de seleção de PERFIL."""
+        page = QWidget()
+        page_layout = QHBoxLayout(page)
+        page_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Coluna da Esquerda (Ícones)
+        left_col = QFrame()
+        left_col.setObjectName("IconColumn")
+        left_layout = QVBoxLayout(left_col)
+        left_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
+        self.profile_group = QButtonGroup(self)
+        self.profile_buttons = {}
+        # O loop agora cria os botões na ordem de PROFILE_INFO (CSAM primeiro)
+        for key, info in PROFILE_INFO.items():
+            btn = self.create_icon_button(info['icon'])
+            btn.setProperty("key", key)
+            self.profile_group.addButton(btn)
+            self.profile_buttons[key] = btn
+            left_layout.addWidget(btn)
+        
+        # --- PADRÃO ALTERADO ---
+        self.profile_buttons["csam_triage"].setChecked(True)
+        self.profile_group.buttonToggled.connect(self.update_profile_details)
+        page_layout.addWidget(left_col)
+
+        # Coluna da Direita (Detalhes)
+        right_col = QFrame()
+        right_col.setObjectName("DetailsColumn")
+        right_layout = QVBoxLayout(right_col)
+        right_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
+        self.profile_details_icon = QLabel()
+        self.profile_details_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.profile_details_title = QLabel()
+        self.profile_details_title.setObjectName("DetailsTitle")
+        self.profile_details_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.profile_details_desc = QLabel()
+        self.profile_details_desc.setObjectName("DetailsDescription")
+        self.profile_details_desc.setWordWrap(True)
+        
+        right_layout.addSpacing(20)
+        right_layout.addWidget(self.profile_details_icon)
+        right_layout.addSpacing(10)
+        right_layout.addWidget(self.profile_details_title)
+        right_layout.addSpacing(15)
+        right_layout.addWidget(self.profile_details_desc)
+        right_layout.addStretch()
+        page_layout.addWidget(right_col, 1) # '1' faz esta coluna esticar
+        
+        return page
+
+    def create_page_2(self):
+        """Cria a página de seleção de ALVO."""
+        page = QWidget()
+        page_layout = QHBoxLayout(page)
+        page_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Coluna da Esquerda (Ícones)
+        left_col = QFrame()
+        left_col.setObjectName("IconColumn")
+        left_layout = QVBoxLayout(left_col)
+        left_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        self.target_group = QButtonGroup(self)
+        self.target_buttons = {}
+        # O loop agora cria os botões na ordem de TARGET_INFO (Arquivos Montados primeiro)
+        for key, info in TARGET_INFO.items():
+            btn = self.create_icon_button(info['icon'])
+            btn.setProperty("key", key)
+            self.target_group.addButton(btn)
+            self.target_buttons[key] = btn
+            left_layout.addWidget(btn)
+            
+        # --- PADRÃO ALTERADO ---
+        self.target_buttons["mounted_files"].setChecked(True)
+        self.target_group.buttonToggled.connect(self.update_target_details)
+        page_layout.addWidget(left_col)
+
+        # Coluna da Direita (Detalhes)
+        right_col = QFrame()
+        right_col.setObjectName("DetailsColumn")
+        right_layout = QVBoxLayout(right_col)
+        right_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        self.target_details_icon = QLabel()
+        self.target_details_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.target_details_title = QLabel()
+        self.target_details_title.setObjectName("DetailsTitle")
+        self.target_details_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.target_details_desc = QLabel()
+        self.target_details_desc.setObjectName("DetailsDescription")
+        self.target_details_desc.setWordWrap(True)
+        
+        right_layout.addSpacing(20)
+        right_layout.addWidget(self.target_details_icon)
+        right_layout.addSpacing(10)
+        right_layout.addWidget(self.target_details_title)
+        right_layout.addSpacing(15)
+        right_layout.addWidget(self.target_details_desc)
+        
+        # Bloco de seleção manual
+        self.manual_frame = QFrame()
+        self.manual_frame.setObjectName("ManualFrame")
+        manual_layout = QVBoxLayout(self.manual_frame)
+        manual_layout.setSpacing(10)
+        
+        manual_buttons_layout = QHBoxLayout()
+        
+        self.browse_dir_button = QToolButton()
+        self.browse_dir_button.setText(" Selecionar Diretório")
+        self.browse_dir_button.setIcon(QIcon.fromTheme("folder-open"))
+        self.browse_dir_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.browse_dir_button.clicked.connect(self.browse_directory)
+        manual_buttons_layout.addWidget(self.browse_dir_button)
+
+        self.browse_file_button = QToolButton()
+        self.browse_file_button.setText(" Selecionar Imagem")
+        self.browse_file_button.setIcon(QIcon.fromTheme("document-open"))
+        self.browse_file_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.browse_file_button.clicked.connect(self.browse_file)
+        manual_buttons_layout.addWidget(self.browse_file_button)
+        
+        self.manual_path_label = QLabel(f"Selecionado: {self.manual_selected_path}")
+        self.manual_path_label.setObjectName("ManualPathLabel")
+        self.manual_path_label.setWordWrap(True)
+        
+        manual_layout.addLayout(manual_buttons_layout)
+        manual_layout.addWidget(self.manual_path_label)
+        
+        self.manual_frame.setVisible(False) # Oculto por padrão
+        right_layout.addWidget(self.manual_frame)
+        
+        right_layout.addStretch()
+        page_layout.addWidget(right_col, 1)
+
+        return page
+
+    def create_icon_button(self, icon_name):
+        """Cria um botão de ícone customizado."""
+        btn = QToolButton()
+        btn.setCheckable(True)
+        btn.setAutoExclusive(True)
+        btn.setIcon(QIcon.fromTheme(icon_name))
+        btn.setIconSize(QSize(48, 48))
+        btn.setFixedSize(QSize(70, 70))
+        btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        return btn
+
+    def load_stylesheet(self):
+        """Carrega o QSS para estilizar a aplicação."""
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #ffffff;
+            }
+            QFrame#TitleBar {
+                background-color: #37474f; /* Cinza escuro */
+                padding: 10px 15px;
+            }
+            QLabel#TitleLabel {
+                font-size: 14pt;
+                font-weight: bold;
+                color: white;
+            }
+            /* --- QSS PARA BOTÃO DE AJUDA --- */
+            QToolButton#HelpButton {
+                background-color: transparent;
+                border: none;
+                border-radius: 4px;
+                padding: 5px;
+            }
+            QToolButton#HelpButton::icon {
+                /* Garante que o ícone do tema seja branco */
+                color: white; 
+            }
+            QToolButton#HelpButton:hover {
+                background-color: #546e7a; /* Cinza um pouco mais claro */
+            }
+            /* --- FIM DO QSS DE AJUDA --- */
+            QFrame#NavBar {
+                background-color: #eceff1; /* Cinza claro */
+                border-top: 1px solid #cfd8dc;
+                padding: 8px;
+            }
+            QFrame#IconColumn {
+                background-color: #f5f5f5; /* Cinza bem claro */
+                border-right: 1px solid #e0e0e0;
+                padding: 10px;
+            }
+            QFrame#DetailsColumn {
+                background-color: white;
+                padding: 15px;
+            }
+            QToolButton {
+                background-color: white;
+                border: 2px solid #b0bec5; /* Borda cinza */
+                border-radius: 8px;
+                margin: 5px;
+            }
+            QToolButton:hover {
+                border-color: #03a9f4; /* Azul no hover */
+            }
+            QToolButton:checked {
+                background-color: #e3f2fd; /* Fundo azul claro */
+                border-color: #03a9f4; /* Borda azul forte */
+            }
+            QLabel#DetailsTitle {
+                font-size: 16pt;
+                font-weight: bold;
+                color: #0277bd; /* Azul escuro */
+            }
+            QLabel#DetailsDescription {
+                font-size: 11pt;
+                color: #212121; /* Texto escuro, alto contraste */
+                line-height: 150%;
+            }
+            QPushButton {
+                font-size: 10pt;
+                padding: 8px 15px;
+                border-radius: 5px;
+                border: 1px solid #b0bec5;
+                background-color: white;
+                color: #212121; 
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: #f5f5f5;
+            }
+            QPushButton#NextButton {
+                font-weight: bold;
+                background-color: #039be5; /* Azul */
+                color: white;
+                border: none;
+            }
+            QPushButton#StartButton {
+                font-weight: bold;
+                background-color: #4CAF50; /* Verde */
+                color: white;
+                border: none;
+            }
+            QFrame#ManualFrame {
+                margin-top: 15px;
+            }
+            QFrame#ManualFrame QToolButton {
+                font-size: 10pt;
+                padding: 8px;
+                background-color: white;
+                color: #212121;
+                border: 1px solid #b0bec5;
+                border-radius: 5px;
+                qproperty-iconSize: 20px;
+                width: 100%;
+            }
+            QFrame#ManualFrame QToolButton:hover {
+                border-color: #03a9f4;
+                background-color: #f5f5f5;
+            }
+            QLabel#ManualPathLabel {
+                font-size: 9pt;
+                color: #37474f;
+                background-color: #eceff1;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+
+    # --- FUNÇÃO NOVA ---
+    def open_help_manual(self):
+        """Abre o manual PDF em uma nova janela."""
+        manual_path = "/home/kali/Desktop/Manual de Uso KALI-LED-IPED-NUDETECTIVE.pdf"
+        
+        if not os.path.exists(manual_path):
+            QMessageBox.critical(self, "Erro ao Abrir Manual",
+                                 f"Não foi possível encontrar o arquivo do manual em:\n{manual_path}")
+            return
+            
+        try:
+            # xdg-open é o comando padrão do Linux para abrir arquivos
+            # com o aplicativo associado (não-bloqueante).
+            subprocess.Popen(['xdg-open', manual_path])
+        except Exception as e:
+            QMessageBox.critical(self, "Erro ao Abrir Manual",
+                                 f"Não foi possível abrir o manual.\nVerifique se 'xdg-open' está instalado.\n\nErro: {e}")
+
+    # --- Funções de Evento e Navegação ---
+
+    def go_to_page_1(self):
+        self.stacked_widget.setCurrentIndex(0)
+        self.title_label.setText("Passo 1 de 2: Selecione o Modo de Processamento")
+        self.back_button.setVisible(False)
+        self.next_button.setVisible(True)
+        self.start_button.setVisible(False)
+        # Atualiza os detalhes para o item selecionado (novo padrão)
+        self.update_profile_details(self.profile_buttons[self.selected_profile], True)
+
+    def go_to_page_2(self):
+        self.stacked_widget.setCurrentIndex(1)
+        self.title_label.setText("Passo 2 de 2: Selecione o Alvo do Processamento")
+        self.back_button.setVisible(True)
+        self.next_button.setVisible(False)
+        self.start_button.setVisible(True)
+        # Atualiza os detalhes para o item selecionado (novo padrão)
+        self.update_target_details(self.target_buttons[self.selected_target], True)
+
+    def update_profile_details(self, button, checked):
+        if not checked:
+            return
+        key = button.property("key")
+        self.selected_profile = key
+        info = PROFILE_INFO.get(key)
+        
+        self.profile_details_title.setText(info['title'])
+        self.profile_details_desc.setText(info['description'])
+        icon_pixmap = QIcon.fromTheme(info['icon']).pixmap(QSize(64, 64))
+        self.profile_details_icon.setPixmap(icon_pixmap)
+            
+    def update_target_details(self, button, checked):
+        if not checked:
+            return
+        key = button.property("key")
+        self.selected_target = key
+        info = TARGET_INFO.get(key)
+        
+        self.target_details_title.setText(info['title'])
+        self.target_details_desc.setText(info['description'])
+        icon_pixmap = QIcon.fromTheme(info['icon']).pixmap(QSize(64, 64))
+        self.target_details_icon.setPixmap(icon_pixmap)
+        
+        self.manual_frame.setVisible(self.selected_target == "manual_dir")
+
+    def _update_manual_path(self, path):
+        """Função helper para atualizar a variável e o label."""
+        if path:
+            self.manual_selected_path = path
+            self.manual_path_label.setText(f"Selecionado: {path}")
+
+    def browse_directory(self):
+        """Abre o diálogo nativo para selecionar *apenas* um diretório."""
+        path = QFileDialog.getExistingDirectory(
+            self, 
+            "Selecione o Diretório Alvo", 
+            self.manual_selected_path
+        )
+        self._update_manual_path(path)
+
+    def browse_file(self):
+        """Abre o diálogo nativo para selecionar *apenas* um arquivo."""
+        path, _ = QFileDialog.getOpenFileName(
+            self, 
+            "Selecione o Arquivo de Imagem", 
+            self.manual_selected_path,
+            FORENSIC_IMAGE_FILTER
+        )
+        self._update_manual_path(path)
+
+    def start_processing(self):
+        # 1. Validação
+        path = self.manual_selected_path
+
+        if self.selected_target == "manual_dir" and (not path or path == "/media"):
+            # Verifica se o caminho ainda é o padrão
+            QMessageBox.critical(self, "Erro de Validação", 
+                                 "Nenhum caminho foi selecionado para o modo manual.\nPor favor, selecione um diretório ou arquivo.")
+            return
+
+        # 2. Confirmação (REMOVIDA)
+        
+        # 3. Construção do Comando
+        cmd_list = [
+            'x-terminal-emulator', 
+            '-e',
+            'bash',
+            '-c',
+        ]
+        
+        bash_cmd = f"sudo {self.executor_script} --profile {self.selected_profile} --target {self.selected_target}"
+        if self.selected_target == "manual_dir":
+            bash_cmd += f" --path \"{self.manual_selected_path}\""
+        
+        bash_cmd += '; echo; echo "Processamento concluído. Pressione Enter para fechar esta janela."; read'
+        
+        cmd_list.append(bash_cmd)
+
+        try:
+            print(f"Executando: {' '.join(cmd_list)}")
+            subprocess.Popen(cmd_list)
+            self.close() # Fecha a GUI para economizar RAM
+        except Exception as e:
+            QMessageBox.critical(self, "Erro ao Iniciar",
+                                 f"Não foi possível iniciar o terminal.\nVerifique se 'x-terminal-emulator' está configurado.\n\nErro: {e}")
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = App()
+    # A centralização foi movida para o construtor 'self.center_window()'
+    window.show()
+    sys.exit(app.exec())
