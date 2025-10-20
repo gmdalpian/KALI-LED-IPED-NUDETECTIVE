@@ -3,12 +3,13 @@
 # iped_executor.sh
 # Script "motor" para execução do IPED.
 # Recebe parâmetros do launcher Python e executa a lógica de processamento.
-# (Versão que usa o perfil original ao continuar processamento)
+# (Versão com sudo interno, exceto mount triage)
 #
 
 # --- Constantes ---
 IPED_DIR="/usr/local/bin/iped"
-JAVA_CMD_BASE="java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar"
+# Adicionado sudo à base do comando Java/IPED
+JAVA_CMD_BASE="sudo java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar"
 OUTPUT_DIR_DESKTOP="/home/kali/Desktop/IPED-CASO"
 OUTPUT_DIR_TRIAGE_BASE="/home/kali/Desktop/triage"
 OUTPUT_DIR_TRIAGE_CASE="$OUTPUT_DIR_TRIAGE_BASE/IPED-CASO"
@@ -20,7 +21,7 @@ RECOVERED_CMD=""          # Armazena o comando recuperado do log para --continue
 
 # --- Funções de Lógica ---
 
-# Função para lidar com BitLocker (AINDA USA ZENITY para senhas)
+# Função para lidar com BitLocker
 handle_bitlocker() {
     local disk_device=$1
     local cmdline_ref=$2 # Passa o nome da variável que armazena os discos
@@ -29,38 +30,41 @@ handle_bitlocker() {
     local disk_basename=$(basename "$disk_device")
     if ! echo "$disk_basename" | grep -q "$root_system"; then
         echo "Detectado bitlocker em $disk_device"
-        mkdir -p /dislocker/bitlocker_$disk_basename
+        # Usar sudo para criar diretórios fora do /home/kali
+        sudo mkdir -p /dislocker/bitlocker_$disk_basename
 
-        dislocker -V $disk_device -- /dislocker/bitlocker_$disk_basename -r
-        if test -f /dislocker/bitlocker_$disk_basename/dislocker-file; then
+        # Usar sudo para dislocker e test
+        sudo dislocker -V $disk_device -- /dislocker/bitlocker_$disk_basename -r
+        if sudo test -f /dislocker/bitlocker_$disk_basename/dislocker-file; then
             echo "Bitlocker (sem senha) montado."
-            ln -sf /dislocker/bitlocker_$disk_basename/dislocker-file /dislocker/dislocker-file_$disk_basename.dd
+            sudo ln -sf /dislocker/bitlocker_$disk_basename/dislocker-file /dislocker/dislocker-file_$disk_basename.dd
             eval "$cmdline_ref+=\" -d /dislocker/dislocker-file_$disk_basename.dd\""
         else
             while true; do
                 BITLOCKER_INFO=('', '')
+                # Usar sudo para cryptsetup
                 while read line ; do
                     [[ $line =~ "Description:" ]] && BITLOCKER_INFO[0]=$line
                     [[ $line =~ "VMK protected with recovery passphrase" ]] && BITLOCKER_INFO[1]=${previousline^^}
                     previousline=$line
-                done <<< "$(cryptsetup bitlkDump $disk_device)"
+                done <<< "$(sudo cryptsetup bitlkDump $disk_device)"
 
                 bitlocker_pass=$(zenity --entry --title="Detectado BitLocker!" \
                     --text="Partição criptografada com Bitlocker em $disk_device.\nDigite a senha de acesso ou a chave de recuperação:\n\n${BITLOCKER_INFO[0]}\n${BITLOCKER_INFO[1]}" \
                     --entry-text "ChaveDeRecuperacao" --width=500)
 
                 if [ $? = 0 ]; then
-                    dislocker -V $disk_device -p"$bitlocker_pass" -- /dislocker/bitlocker_$disk_basename -r
-                    if test -f /dislocker/bitlocker_$disk_basename/dislocker-file; then
+                    sudo dislocker -V $disk_device -p"$bitlocker_pass" -- /dislocker/bitlocker_$disk_basename -r
+                    if sudo test -f /dislocker/bitlocker_$disk_basename/dislocker-file; then
                         echo "Bitlocker decifrado com chave de recuperação."
-                        ln -sf /dislocker/bitlocker_$disk_basename/dislocker-file /dislocker/dislocker-file_$disk_basename.dd
+                        sudo ln -sf /dislocker/bitlocker_$disk_basename/dislocker-file /dislocker/dislocker-file_$disk_basename.dd
                         eval "$cmdline_ref+=\" -d /dislocker/dislocker-file_$disk_basename.dd\""
                         break
                     else
-                        dislocker -V $disk_device --user-password="$bitlocker_pass" -- /dislocker/bitlocker_$disk_basename -r
-                        if test -f /dislocker/bitlocker_$disk_basename/dislocker-file; then
+                        sudo dislocker -V $disk_device --user-password="$bitlocker_pass" -- /dislocker/bitlocker_$disk_basename -r
+                        if sudo test -f /dislocker/bitlocker_$disk_basename/dislocker-file; then
                             echo "Bitlocker decifrado com senha de usuário."
-                            ln -sf /dislocker/bitlocker_$disk_basename/dislocker-file /dislocker/dislocker-file_$disk_basename.dd
+                            sudo ln -sf /dislocker/bitlocker_$disk_basename/dislocker-file /dislocker/dislocker-file_$disk_basename.dd
                             eval "$cmdline_ref+=\" -d /dislocker/dislocker-file_$disk_basename.dd\""
                             break
                         else
@@ -86,10 +90,11 @@ setup_output_dir() {
     local root_system_triage=${root_system:5:${#root_system}-6}
     [ -z "$root_system_triage" ] && root_system_triage='null'
 
+    # Usar sudo para blkid
     while read line ; do
         local part=$(echo "$line" | awk '{print $1}')
         if echo "$part" | grep -q "$root_system_triage"; then
-           if blkid /dev/$part | grep -q 'IPED-TRIAGE'; then
+           if sudo blkid /dev/$part | grep -q 'IPED-TRIAGE'; then
 	           triage_part_device="/dev/$part"
                TRIAGE_PARTITION_FOUND=true
 	           break
@@ -102,39 +107,76 @@ setup_output_dir() {
         OUTPUT_DIR=$OUTPUT_DIR_TRIAGE_CASE
         DESKTOP_FILE="IPED-Caso-triage.desktop"
 
-        if ! findmnt --mountpoint $OUTPUT_DIR_TRIAGE_BASE &> /dev/null; then
-            echo "Montando partição triage em $OUTPUT_DIR_TRIAGE_BASE"
-            mkdir -p $OUTPUT_DIR_TRIAGE_BASE
-            if ! mount -o rw $triage_part_device $OUTPUT_DIR_TRIAGE_BASE; then
-                echo "ERRO: Falha ao montar a partição Triage em $OUTPUT_DIR_TRIAGE_BASE. Verifique permissões ou sistema de arquivos."
+        # Garante que o diretório base exista e pertença ao kali ANTES de montar
+        if [ ! -d "$OUTPUT_DIR_TRIAGE_BASE" ]; then
+             echo "Criando diretório base de triagem: $OUTPUT_DIR_TRIAGE_BASE"
+             mkdir -p "$OUTPUT_DIR_TRIAGE_BASE"
+             # Não precisa de sudo chown aqui, pois mkdir como kali cria com dono kali
+        fi
+
+        # Verifica se JÁ está montado (talvez pelo mount_disks.sh)
+        if findmnt --mountpoint $OUTPUT_DIR_TRIAGE_BASE &> /dev/null; then
+             echo "Partição Triage já está montada em $OUTPUT_DIR_TRIAGE_BASE."
+             # Verifica se o ponto de montagem tem permissão de escrita para o usuário atual (kali)
+             if [ ! -w "$OUTPUT_DIR_TRIAGE_BASE" ]; then
+                  echo "AVISO: Ponto de montagem $OUTPUT_DIR_TRIAGE_BASE não tem permissão de escrita para o usuário kali."
+                  echo "Tentando remontar com permissões..."
+                  # Tenta desmontar primeiro (pode falhar se estiver em uso)
+                  sudo umount "$OUTPUT_DIR_TRIAGE_BASE" &> /dev/null
+                  # Tenta montar novamente SEM sudo
+                  echo "Tentando montar $triage_part_device em $OUTPUT_DIR_TRIAGE_BASE sem sudo..."
+                  mount -o rw $triage_part_device $OUTPUT_DIR_TRIAGE_BASE # TENTA SEM SUDO
+                  if [ $? -ne 0 ]; then
+                       echo "ERRO: Falha ao montar partição Triage sem sudo. Verifique permissões/fstab ou execute este script como root."
+                       TRIAGE_PARTITION_FOUND=false
+                       zenity --error --text="Falha ao montar a partição Triage como usuário 'kali'.\nVerifique as permissões ou execute o launcher como root.\nO SWAP não será criado e o caso será salvo no Desktop." --timeout=15
+                       OUTPUT_DIR=$OUTPUT_DIR_DESKTOP
+                       DESKTOP_FILE="IPED-Caso.desktop"
+                       LOG_FILE_OPT=""
+                       KEYWORD_FILE_OPT="-l $IPED_DIR/palavras-chave.txt"
+                  fi
+             fi
+        else
+            # --- MONTAGEM SEM SUDO ---
+            echo "Tentando montar $triage_part_device em $OUTPUT_DIR_TRIAGE_BASE sem sudo..."
+            mount -o rw $triage_part_device $OUTPUT_DIR_TRIAGE_BASE # TENTA SEM SUDO
+            if [ $? -ne 0 ]; then
+                echo "ERRO: Falha ao montar partição Triage sem sudo. Verifique permissões/fstab ou execute este script como root."
                 TRIAGE_PARTITION_FOUND=false
-                zenity --error --text="Falha ao montar a partição Triage.\nO SWAP não será criado e o caso será salvo no Desktop." --timeout=10
+                zenity --error --text="Falha ao montar a partição Triage como usuário 'kali'.\nVerifique as permissões ou execute o launcher como root.\nO SWAP não será criado e o caso será salvo no Desktop." --timeout=15
                 OUTPUT_DIR=$OUTPUT_DIR_DESKTOP
                 DESKTOP_FILE="IPED-Caso.desktop"
                 LOG_FILE_OPT=""
                 KEYWORD_FILE_OPT="-l $IPED_DIR/palavras-chave.txt"
             fi
+            # --- FIM DA MONTAGEM SEM SUDO ---
         fi
 
+
+        # Só continua a lógica de Triage se a montagem (com ou sem sudo) foi bem sucedida
         if $TRIAGE_PARTITION_FOUND; then
             LOG_FILE_OPT="-log $OUTPUT_DIR_TRIAGE_BASE/IPED-Processamento-$(date +%y%m%d%H%M).log"
-            if test -f "$OUTPUT_DIR_TRIAGE_BASE/palavras-chave.txt"; then
+            # Usar sudo para testar e copiar arquivos fora do /home/kali
+            if sudo test -f "$OUTPUT_DIR_TRIAGE_BASE/palavras-chave.txt"; then
                 KEYWORD_FILE_OPT="-l $OUTPUT_DIR_TRIAGE_BASE/palavras-chave.txt"
             else
                 KEYWORD_FILE_OPT="-l $IPED_DIR/palavras-chave.txt"
             fi
 
-            cp "$IPED_DIR/LocalConfig-triage.txt" "$IPED_DIR/LocalConfig.txt"
+            sudo cp "$IPED_DIR/LocalConfig-triage.txt" "$IPED_DIR/LocalConfig.txt"
 
+            # Lógica de SWAP (precisa de sudo)
             if [ "$PROFILE" == "csam_triage" ] || [ "$PROFILE" == "triage" ]; then
                 if [ "$(cat /proc/swaps | wc -l)" -le 1 ]; then
                     local swap_file_path="$OUTPUT_DIR_TRIAGE_BASE/swapfile"
+                    # Testar arquivo sem sudo, pois diretório deve ser do kali
                     if test -f "$swap_file_path"; then
                          echo "Arquivo SWAP encontrado ($swap_file_path). Ativando..."
-                         swapon "$swap_file_path"
+                         sudo swapon "$swap_file_path" # Precisa de sudo
                          if [ $? -ne 0 ]; then
                              echo "Aviso: Falha ao ativar SWAP existente. Tentando recriar..."
-                             swapoff "$swap_file_path" &> /dev/null
+                             sudo swapoff "$swap_file_path" &> /dev/null # Precisa de sudo
+                             # rm sem sudo, pois arquivo deve ser do kali
                              rm -f "$swap_file_path"
                          else
                               local create_swap=false
@@ -164,12 +206,14 @@ setup_output_dir() {
                               echo "Espaço disponível na partição Triage: $((available_kb / 1024 / 1024)) GB"
                               echo "Tamanho alvo do SWAP (10% ou 10GB max): ${swap_size_gb} GB (${swap_size_mb} MB)"
 
+                              # truncate sem sudo
                               if truncate -s "${swap_size_mb}M" "$swap_file_path"; then
-                                   mkswap "$swap_file_path"
-                                   swapon "$swap_file_path"
+                                   # mkswap e swapon com sudo
+                                   sudo mkswap "$swap_file_path"
+                                   sudo swapon "$swap_file_path"
                                    if [ $? -ne 0 ]; then
                                        echo "ERRO: Falha ao ativar o SWAP recém-criado!"
-                                       rm -f "$swap_file_path"
+                                       rm -f "$swap_file_path" # rm sem sudo
                                    fi
                               else
                                    echo "ERRO: Falha ao criar o arquivo SWAP com truncate."
@@ -179,8 +223,8 @@ setup_output_dir() {
                 else
                     echo "Memoria SWAP ja esta habilitada."
                 fi
-            fi
-        fi
+            fi # Fim da lógica SWAP
+        fi # Fim do if $TRIAGE_PARTITION_FOUND (pós-montagem)
 
     else # Se a partição Triage NÃO foi encontrada inicialmente
         echo "Nenhuma partição IPED-TRIAGE encontrada. Usando Desktop."
@@ -200,6 +244,7 @@ setup_output_dir() {
     echo "Diretório de saída definido como: $OUTPUT_DIR"
 
     # --- VERIFICA SE O DIRETÓRIO JÁ EXISTE ---
+    # Usa sudo para rm e mkdir caso o diretório seja fora do /home/kali ou tenha permissões restritas
     if [ -d "$OUTPUT_DIR" ]; then
         echo "Diretório de saída '$OUTPUT_DIR' já existe."
         if zenity --question --title="Caso Existente Encontrado" \
@@ -208,53 +253,59 @@ setup_output_dir() {
             --cancel-label="Continuar Processamento Anterior" \
             --width=450;
         then
-            # Usuário escolheu "Processar Novamente" (OK)
             echo "Usuário escolheu processar novamente. Apagando diretório existente..."
-            rm -rf "$OUTPUT_DIR"
+            sudo rm -rf "$OUTPUT_DIR" # Usar sudo
             if [ $? -ne 0 ]; then
                 zenity --error --text="Falha ao apagar o diretório '$OUTPUT_DIR'.\nVerifique as permissões."
                 exit 6
             fi
-            mkdir -p "$OUTPUT_DIR"
+            sudo mkdir -p "$OUTPUT_DIR" # Usar sudo
+            # Garante que o usuário kali seja o dono do diretório recém-criado
+            sudo chown kali:kali "$OUTPUT_DIR"
             CONTINUE_PROCESSING=false
         else
-            # Usuário escolheu "Continuar" (Cancel)
             echo "Usuário escolheu continuar o processamento anterior."
             CONTINUE_PROCESSING=true
-            # --- MODIFICAÇÃO: Recuperar comando e perfil original ---
             if [ -f "$COMMAND_LOG_FILE" ]; then
                  local escaped_output_dir=$(sed 's/[&/\]/\\&/g' <<<"$OUTPUT_DIR")
-                 RECOVERED_CMD=$(grep "$escaped_output_dir" "$COMMAND_LOG_FILE" | tail -n 1 | sed 's/^\[.*\] Executando: //')
+                 local original_cmd=$(grep "$escaped_output_dir" "$COMMAND_LOG_FILE" | tail -n 1 | sed 's/^\[.*\] Executando: //')
 
-                 if [ -z "$RECOVERED_CMD" ]; then
+                 if [ -z "$original_cmd" ]; then
                       zenity --error --text="Não foi possível encontrar o comando anterior para '$OUTPUT_DIR' no log.\nNão é possível continuar. Verifique o arquivo '$COMMAND_LOG_FILE'."
                       exit 7
                  else
-                      echo "Comando anterior recuperado: $RECOVERED_CMD"
-                      # Extrai o perfil original do comando recuperado
-                      local original_profile=$(echo "$RECOVERED_CMD" | grep -o '\-profile [^ ]*' | awk '{print $2}')
+                      echo "Comando anterior recuperado: $original_cmd"
+                      local original_profile=$(echo "$original_cmd" | grep -o '\-profile [^ ]*' | awk '{print $2}')
                       if [ -z "$original_profile" ]; then
                           zenity --error --text="Não foi possível extrair o perfil do comando anterior.\nNão é possível continuar."
                           exit 8
                       fi
-                      # *** SOBRESCREVE O PROFILE ATUAL COM O ORIGINAL ***
                       echo "Usando o perfil original do caso: $original_profile (Seleção atual '$PROFILE' ignorada)."
                       PROFILE=$original_profile
-                      # Adiciona a flag --continue (se já não existir)
-                      if ! echo "$RECOVERED_CMD" | grep -q -- '--continue'; then
-                           RECOVERED_CMD+=" --continue"
+
+                      # Insere --continue após '-jar iped.jar'
+                      if echo "$original_cmd" | grep -q -- "-jar iped.jar"; then
+                          if ! echo "$original_cmd" | grep -q -- '--continue'; then
+                               RECOVERED_CMD=$(echo "$original_cmd" | sed 's/-jar iped\.jar/-jar iped.jar --continue/')
+                               echo "Comando final para continuar: $RECOVERED_CMD"
+                          else
+                               echo "Flag --continue já presente no comando original. Usando como está."
+                               RECOVERED_CMD="$original_cmd"
+                          fi
+                      else
+                           zenity --error --text="Formato de comando inesperado no log. Não foi possível inserir '--continue'.\nComando encontrado: $original_cmd"
+                           exit 9
                       fi
-                      echo "Comando final para continuar: $RECOVERED_CMD"
                  fi
             else
                  zenity --error --text="Arquivo de log '$COMMAND_LOG_FILE' não encontrado.\nNão é possível recuperar o comando anterior para continuar."
                  exit 7
             fi
-            # --- FIM DA MODIFICAÇÃO ---
         fi
     else
-        # Diretório não existe, cria normalmente
-        mkdir -p "$OUTPUT_DIR"
+        # Diretório não existe, cria normalmente (com sudo e ajusta dono)
+        sudo mkdir -p "$OUTPUT_DIR" # Usar sudo
+        sudo chown kali:kali "$OUTPUT_DIR"
         CONTINUE_PROCESSING=false
     fi
 
@@ -271,7 +322,7 @@ build_target_string() {
         "all_disks")
             echo "Construindo string de alvos: Discos"
 
-            # 1. Discos Físicos
+            # 1. Discos Físicos (lsblk não precisa de sudo)
             while read line ; do
                 local disk=$(echo "$line" | awk '{print $1}')
                 if ! echo "$root_system" | grep -q "$disk"; then
@@ -279,8 +330,8 @@ build_target_string() {
                 fi
             done <<< "$(lsblk -l | grep disk)"
 
-            # 2. LDM (RAID Windows)
-            ldmtool create all &> /dev/null
+            # 2. LDM (RAID Windows) - Precisa de sudo
+            sudo ldmtool create all &> /dev/null
             while read line ; do
                 local disk=$(echo "$line" | awk '{print $1}')
                 if ! echo "$TARGET_STRING" | grep -q "$disk"; then
@@ -288,31 +339,34 @@ build_target_string() {
                 fi
             done <<< "$(lsblk -l | grep '\dm\b')"
 
-            # 3. VSS
+            # 3. VSS - Precisa de sudo para acessar /vss e criar links
             if [ -d "/vss" ]; then
                 echo "Verificando VSS..."
-                mkdir -p /vss_iped
+                sudo mkdir -p /vss_iped
                 while read line ; do
-                    for vss in $(ls /vss/$line 2>/dev/null); do
+                    # ls precisa de sudo
+                    for vss in $(sudo ls /vss/$line 2>/dev/null); do
                         echo "Achou vss: /vss/$line/$vss"
-                        ln -sf "/vss/$line/$vss" "/vss_iped/$line-$vss.dd"
+                        sudo ln -sf "/vss/$line/$vss" "/vss_iped/$line-$vss.dd"
                         TARGET_STRING+=" -d /vss_iped/$line-$vss.dd"
                     done
-                done <<< "$(ls /vss/ 2>/dev/null)"
+                done <<< "$(sudo ls /vss/ 2>/dev/null)" # ls precisa de sudo
             fi
 
-            # 4. BitLocker
+            # 4. BitLocker - handle_bitlocker já usa sudo internamente
             echo "Verificando Bitlocker..."
-            mkdir -p /dislocker
+            # mkdir precisa de sudo
+            sudo mkdir -p /dislocker
             while read line ; do
                 if [ ! -z "$line" ]; then
                     handle_bitlocker "$line" TARGET_STRING "$root_system"
                 fi
-            done <<< "$(dislocker-find)"
+            done <<< "$(sudo dislocker-find)" # Precisa de sudo
             ;;
 
         "mounted_files")
             echo "Construindo string de alvos: Arquivos Montados"
+            # Chama o script que já tem sudo interno
             if [ -f "/home/kali/mount_disks.sh" ]; then
                 /home/kali/mount_disks.sh
             fi
@@ -339,21 +393,19 @@ build_target_string() {
 # Executa tarefas pós-processamento
 run_post_processing() {
     echo "Iniciando pós-processamento..."
+    # cp não precisa de sudo se o destino for do usuário kali
     cp "$IPED_DIR/Ferramenta_de_Pesquisa.sh" "$OUTPUT_DIR/"
     cp "$IPED_DIR/$DESKTOP_FILE" "/home/kali/Desktop/IPED-Caso.desktop"
 
-    # Define o proprietário como 'kali'
+    # Define o proprietário como 'kali' (precisa de sudo)
     local output_parent_dir=$(dirname "$OUTPUT_DIR")
-    chown -R kali:kali "$output_parent_dir" || echo "Aviso: Falha ao mudar proprietário de $output_parent_dir"
-    chown kali:kali "/home/kali/Desktop/IPED-Caso.desktop" || echo "Aviso: Falha ao mudar proprietário do atalho"
+    sudo chown -R kali:kali "$output_parent_dir" || echo "Aviso: Falha ao mudar proprietário de $output_parent_dir"
+    sudo chown kali:kali "/home/kali/Desktop/IPED-Caso.desktop" || echo "Aviso: Falha ao mudar proprietário do atalho"
 
     cd "$OUTPUT_DIR"
     if [ -f "./Ferramenta_de_Pesquisa.sh" ]; then
-        if grep -q "sudo" ./Ferramenta_de_Pesquisa.sh; then
-             ./Ferramenta_de_Pesquisa.sh
-        else
-             sudo -u kali ./Ferramenta_de_Pesquisa.sh
-        fi
+        # Executa como kali (sem sudo)
+        ./Ferramenta_de_Pesquisa.sh
     else
         echo "Erro: Ferramenta_de_Pesquisa.sh não encontrada."
     fi
@@ -370,7 +422,6 @@ fi
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        # Armazena o profile selecionado pelo usuário em uma variável temporária
         --profile) SELECTED_PROFILE="$2"; shift ;;
         --target) TARGET_MODE="$2"; shift ;;
         --path) MANUAL_PATH="$2"; shift ;;
@@ -378,7 +429,6 @@ while [[ "$#" -gt 0 ]]; do
     esac
     shift
 done
-# Define o PROFILE global com o selecionado (pode ser sobrescrito pelo modo continue)
 PROFILE=$SELECTED_PROFILE
 
 echo "============================================="
@@ -391,13 +441,14 @@ echo "---------------------------------------------"
 
 
 # 2. Setup
+# cd não precisa de sudo
 cd "$IPED_DIR" || { echo "Erro: Diretório $IPED_DIR não encontrado."; exit 1; }
-mplayer &> /dev/null # Bugfix
+# mplayer pode precisar de sudo
+sudo mplayer &> /dev/null # Bugfix
 
 # 3. Preparação
-setup_output_dir # Define $OUTPUT_DIR, $CONTINUE_PROCESSING e sobrescreve $PROFILE se for continuar
+setup_output_dir # Define $OUTPUT_DIR, $CONTINUE_PROCESSING e $PROFILE
 
-# Só constrói a string de alvos se NÃO for continuar
 if ! $CONTINUE_PROCESSING; then
      build_target_string # Define $TARGET_STRING
 fi
@@ -405,28 +456,31 @@ fi
 
 # 4. Construção e Log do Comando
 if $CONTINUE_PROCESSING; then
-    # Usa o comando recuperado e já modificado (com --continue e profile original)
+    # RECOVERED_CMD já contém 'sudo java...'
     FINAL_CMD=$RECOVERED_CMD
-    echo "Usando comando recuperado para continuar (com perfil '$PROFILE'):"
+    echo "========================================================"
+    echo "COMANDO PARA CONTINUAR (Perfil Original '$PROFILE'):"
+    echo "$FINAL_CMD"
+    echo "========================================================"
 else
-    # Constrói o comando normalmente para um novo processamento
+    # JAVA_CMD_BASE já contém 'sudo java...'
     FINAL_CMD="$JAVA_CMD_BASE -o $OUTPUT_DIR -profile $PROFILE $LOG_FILE_OPT $KEYWORD_FILE_OPT $TARGET_STRING"
     echo "========================================================"
     echo "COMANDO FINAL A SER EXECUTADO:"
     echo "$FINAL_CMD"
     echo "========================================================"
 
-    # --- LOG DO COMANDO ---
+    # LOG DO COMANDO (sem sudo, pois o arquivo está no Desktop do kali)
     echo "Registrando comando em $COMMAND_LOG_FILE..."
     mkdir -p "$(dirname "$COMMAND_LOG_FILE")"
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Executando: $FINAL_CMD" >> "$COMMAND_LOG_FILE"
+    # chown sem sudo, pois o arquivo é do kali
     chown kali:kali "$COMMAND_LOG_FILE" || echo "Aviso: Falha ao mudar proprietário do arquivo de log do comando."
-    # --- FIM DO LOG ---
 fi
 
 echo "Iniciando IPED... Isso pode levar muito tempo."
 
-# 5. Execução
+# 5. Execução (FINAL_CMD já contém sudo)
 $FINAL_CMD
 
 if [ $? -ne 0 ]; then

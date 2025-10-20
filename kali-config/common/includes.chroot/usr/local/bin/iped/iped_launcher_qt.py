@@ -2,7 +2,7 @@
 #
 # iped_launcher_qt.py
 # Interface gráfica em Python/PyQt6 no formato "Wizard" (Assistente).
-# (Versão com Label do Volume no Info do Sistema)
+# (Versão que chama scripts backend SEM sudo)
 #
 import sys
 import os
@@ -16,22 +16,22 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 from PyQt6.QtCore import Qt, QSize
 
-# --- Dicionários de Descrição (REORDENADOS E ATUALIZADOS) ---
+# --- Dicionários de Descrição ---
 PROFILE_INFO = {
     "csam_triage": {
-        "title": "CSAM-Triage",
+        "title": "CSAM-Triage (Recomendado)",
         "icon": "security-high",
-        "description": "Perfil otimizado para detecção de <b>CSAM - Child Sexual Abuse Material (arquivos contendo cenas de abuso sexual infanto-juvenil)</b>. Inclui modelos de IA utilizando redes neurais para detecção de arquivos desconhecidos e verificação de hashes para detectar arquivos conhecidos, caso esteja presente o arquivo de hashes do IPED no volume IPED-TRIAGE (veja manual de uso). Processa somente imagens e vídeos, excluindo todos os demais arquivos do caso."
+        "description": "<b>Perfil otimizado para detecção de CSAM (Recomendado)</b>. Inclui modelos de IA (CNN), verificação de hashes (Project Vic) e busca por assinaturas específicas."
     },
     "triage": {
-        "title": "Triage (Documentos, e-mails etc.)",
+        "title": "Triage (Completo)",
         "icon": "system-search",
-        "description": "Indexa o conteúdo de arquivos de alguns formatos de documento (office, pdf, html, e-mails, histórico de Internet etc.) em diretórios comuns do usuário. Analisadores (parsers) de imagem e vídeo estão desativados. Algumas pastas, como aquelas que contêm arquivos de sistema, não são incluídas no caso. Assim, você pode fazer algumas buscas indexadas em cenários de triagem. O tempo para concluir o processamento é muito imprevisível, depende muito do volume de dados do usuário."
+        "description": "<b>Perfil de triagem padrão</b>. Mais completo, inclui <i>carving</i> de arquivos deletados e extrai um conjunto maior de metadados."
     },
     "fastmode": {
         "title": "FastMode (Rápido)",
         "icon": "preferences-system-performance",
-        "description": "Modo de processamento mais rápido para pré-visualizar dados. Todos os recursos que precisam de acesso ao conteúdo do arquivo são desativados, como cálculo de hash, análise de assinatura, indexação, carving, varredura de regex (regex scanning) e geração de miniaturas. Basicamente, ele executa um ls na árvore do sistema de arquivos. Mas os arquivos ainda são categorizados com base na extensão, você pode pré-visualizar o conteúdo do arquivo, navegar na árvore do sistema de arquivos, usar a galeria de imagens e aplicar filtros com base em quaisquer metadados do arquivo, como nome, caminho, tamanho ou horários MAC (mac times)."
+        "description": "<b>Perfil mais rápido</b>, focado apenas em artefatos comuns (fotos, vídeos, chats) e indexação. Ideal para uma análise *muito* rápida."
     }
 }
 
@@ -44,7 +44,7 @@ TARGET_INFO = {
     "all_disks": {
         "title": "Discos (Completo/Lento)",
         "icon": "drive-harddisk",
-        "description": "<b>Processa todos os dispositivos</b>: discos físicos, partições, volumes LDM (RAID), VSS (Shadow Copies) e BitLocker. É o método mais completo, porém mais lento*."
+        "description": "<b>Processa todos os dispositivos</b>: discos físicos, partições, volumes LDM (RAID), VSS (Shadow Copies) e BitLocker. É o método mais completo, porém *muito mais lento*."
     },
     "manual_dir": {
         "title": "Selecionar Diretório/Imagem",
@@ -476,22 +476,19 @@ class App(QMainWindow):
             QApplication.restoreOverrideCursor()
             QMessageBox.critical(self, "Erro", f"Falha ao coletar informações do sistema: {e}")
 
-    # --- FUNÇÃO _gather_system_info (MODIFICADA) ---
     def _gather_system_info(self):
         """Executa comandos no shell para coletar informações."""
         info = []
 
-        def run_cmd(cmd, check_return_code=True): # Adicionado parâmetro check_return_code
+        def run_cmd(cmd, check_return_code=True):
             try:
                 env = os.environ.copy()
                 env['LANG'] = 'C' # Garante saída em inglês
-                # Usar check=check_return_code
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, check=check_return_code, env=env)
-                return result.stdout.strip() # Retorna stdout mesmo se check=False
+                return result.stdout.strip()
             except subprocess.TimeoutExpired:
                  return f"TIMEOUT: Comando '{' '.join(cmd)}' demorou demais."
             except subprocess.CalledProcessError as e:
-                # Retorna stderr se disponível e relevante
                 err_msg = e.stderr.strip() if e.stderr else str(e)
                 return f"ERRO ({e.returncode}): Ao executar '{' '.join(cmd)}': {err_msg}"
             except FileNotFoundError:
@@ -508,7 +505,7 @@ class App(QMainWindow):
                     cpu_model = line.split(":", 1)[1].strip()
                     break
         else:
-            cpu_model = cpu_output # Mostra a mensagem de erro
+            cpu_model = cpu_output
         info.append(f"CPU: {cpu_model}")
 
         # 2. RAM
@@ -551,15 +548,12 @@ class App(QMainWindow):
                         info.append(f"(Ignorando dispositivo de boot: {boot_disk_to_ignore})")
             else:
                  info.append(f"(Aviso: {boot_device_full}, mostrando tudo.)")
-                 boot_disk_to_ignore = "" # Garante que não filtre nada
+                 boot_disk_to_ignore = ""
         except Exception as e:
             info.append(f"(Erro ao identificar disco de boot: {e})")
             boot_disk_to_ignore = ""
 
-        # --- Comando lsblk MODIFICADO ---
-        # Adicionado LABEL
         disk_output_raw = run_cmd(['lsblk', '-l', '-o', 'NAME,SIZE,FSTYPE,LABEL,TYPE,MOUNTPOINT'])
-        # --- FIM DA MODIFICAÇÃO ---
 
         if not disk_output_raw.startswith("ERRO") and not disk_output_raw.startswith("TIMEOUT"):
             filtered_disk_output = []
@@ -588,20 +582,17 @@ class App(QMainWindow):
             else:
                 info.append("\n".join(filtered_disk_output))
         else:
-            info.append(disk_output_raw) # Mostra a mensagem de erro
+            info.append(disk_output_raw)
 
 
         # 4. BitLocker
         info.append("\nPartições BitLocker:")
         info.append("="*40)
-        # Executa 'sudo dislocker-find' sem verificar o código de retorno
         bitlocker_output = run_cmd(['sudo', 'dislocker-find'], check_return_code=False)
 
-        # Verifica se a saída contém 'Erro', 'não encontrado', ou 'TIMEOUT'
         if bitlocker_output.startswith("ERRO") or bitlocker_output.startswith("TIMEOUT"):
-            info.append(bitlocker_output) # Mostra a mensagem de erro
+            info.append(bitlocker_output)
         else:
-            # Se não houve erro de execução, exibe a saída (mesmo que vazia)
             info.append(bitlocker_output if bitlocker_output else "Nenhuma partição BitLocker encontrada.")
 
         return "\n".join(info)
@@ -656,6 +647,7 @@ class App(QMainWindow):
             self.manual_selected_path = path
             self.manual_path_label.setText(f"Selecionado: {path}")
 
+    # --- FUNÇÃO MODIFICADA ---
     def _run_mount_script_if_needed(self):
         """
         Chama o script de montagem em um terminal, se ele existir e
@@ -668,8 +660,8 @@ class App(QMainWindow):
             return True
 
         if not os.path.exists(MOUNT_SCRIPT_PATH):
-            QMessageBox.warning(self, "Aviso",
-                                f"Script de montagem não encontrado em:\n{MOUNT_SCRIPT_PATH}\n\nO diálogo de seleção pode não mostrar todos os volumes.")
+            # Apenas avisa no terminal, não mostra QMessageBox aqui
+            print(f"Aviso: Script de montagem não encontrado em {MOUNT_SCRIPT_PATH}")
             self.mount_script_run = True # Marca como "rodado" para não tentar de novo
             return True # Continua mesmo sem o script
 
@@ -680,8 +672,9 @@ class App(QMainWindow):
             'bash',
             '-c',
         ]
+        # REMOVIDO sudo daqui
         bash_cmd = f"echo 'Executando script para montar discos e verificar BitLocker...'; "
-        bash_cmd += f"sudo {MOUNT_SCRIPT_PATH}; "
+        bash_cmd += f"{MOUNT_SCRIPT_PATH}; " # Script já tem sudo interno
         bash_cmd += 'echo; echo "Script finalizado. Pressione Enter para fechar este terminal e continuar."; read'
         cmd_list.append(bash_cmd)
 
@@ -728,6 +721,7 @@ class App(QMainWindow):
         )
         self._update_manual_path(path)
 
+    # --- FUNÇÃO MODIFICADA ---
     def start_processing(self):
         # 1. Validação
         path = self.manual_selected_path
@@ -747,7 +741,8 @@ class App(QMainWindow):
             '-c',
         ]
 
-        bash_cmd = f"sudo {self.executor_script} --profile {self.selected_profile} --target {self.selected_target}"
+        # REMOVIDO sudo daqui
+        bash_cmd = f"{self.executor_script} --profile {self.selected_profile} --target {self.selected_target}"
         if self.selected_target == "manual_dir":
             bash_cmd += f" --path \"{self.manual_selected_path}\""
 
