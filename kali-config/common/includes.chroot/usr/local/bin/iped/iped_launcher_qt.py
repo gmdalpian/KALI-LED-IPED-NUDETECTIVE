@@ -2,7 +2,7 @@
 #
 # iped_launcher_qt.py
 # Interface gráfica em Python/PyQt6 no formato "Wizard" (Assistente).
-# (Versão com chamada única ao mount_disks.sh em Info e Browse)
+# (Versão com Label do Volume no Info do Sistema)
 #
 import sys
 import os
@@ -21,17 +21,17 @@ PROFILE_INFO = {
     "csam_triage": {
         "title": "CSAM-Triage",
         "icon": "security-high",
-        "description": "Perfil otimizado para detecção de <b>CSAM (arquivos contendo cenas de abuso sexual infanto-juvenil)</b> em arquivos de imagem e vídeo. Inclui modelos de IA utilizando redes neurais para detecção de arquivos desconhecidos e verificação de hashes."
+        "description": "Perfil otimizado para detecção de <b>CSAM - Child Sexual Abuse Material (arquivos contendo cenas de abuso sexual infanto-juvenil)</b>. Inclui modelos de IA utilizando redes neurais para detecção de arquivos desconhecidos e verificação de hashes para detectar arquivos conhecidos, caso esteja presente o arquivo de hashes do IPED no volume IPED-TRIAGE (veja manual de uso). Processa somente imagens e vídeos, excluindo todos os demais arquivos do caso."
     },
     "triage": {
         "title": "Triage (Documentos, e-mails etc.)",
         "icon": "system-search",
-        "description": "<b>Perfil de triagem padrão</b>. Mais completo, inclui <i>carving</i> de arquivos deletados e extrai um conjunto maior de metadados."
+        "description": "Indexa o conteúdo de arquivos de alguns formatos de documento (office, pdf, html, e-mails, histórico de Internet etc.) em diretórios comuns do usuário. Analisadores (parsers) de imagem e vídeo estão desativados. Algumas pastas, como aquelas que contêm arquivos de sistema, não são incluídas no caso. Assim, você pode fazer algumas buscas indexadas em cenários de triagem. O tempo para concluir o processamento é muito imprevisível, depende muito do volume de dados do usuário."
     },
     "fastmode": {
         "title": "FastMode (Rápido)",
         "icon": "preferences-system-performance",
-        "description": "<b>Perfil mais rápido</b>,  sem indexação. Ideal para uma análise rápida."
+        "description": "Modo de processamento mais rápido para pré-visualizar dados. Todos os recursos que precisam de acesso ao conteúdo do arquivo são desativados, como cálculo de hash, análise de assinatura, indexação, carving, varredura de regex (regex scanning) e geração de miniaturas. Basicamente, ele executa um ls na árvore do sistema de arquivos. Mas os arquivos ainda são categorizados com base na extensão, você pode pré-visualizar o conteúdo do arquivo, navegar na árvore do sistema de arquivos, usar a galeria de imagens e aplicar filtros com base em quaisquer metadados do arquivo, como nome, caminho, tamanho ou horários MAC (mac times)."
     }
 }
 
@@ -49,12 +49,12 @@ TARGET_INFO = {
     "manual_dir": {
         "title": "Selecionar Diretório/Imagem",
         "icon": "folder-saved-search",
-        "description": "<b>Permite escolher manualmente</b> um diretório específico ou um único arquivo de imagem forense (como .E01, .dd, .vmdk) para ser processado."
+        "description": "<b>Permite escolher manualmente</b> um diretório específico ou um único arquivo de imagem forense (como .E01, .dd, .vmdk) ou de extração de celulares (.ufdr) para ser processado."
     }
 }
 
 # Filtro de arquivos de imagem forense
-FORENSIC_IMAGE_FILTER = "Imagens Forenses (*.E01 *.Ex01 *.e01 *.ex01 *.dd *.raw *.img *.vmdk *.vhd *.AFF);;Todos os Arquivos (*)"
+FORENSIC_IMAGE_FILTER = "Imagens Forenses (*.E01 *.Ex01 *.e01 *.ex01 *.dd *.raw *.img *.vmdk *.vhd *.AFF *.ufdr *.UFDR);;Todos os Arquivos (*)"
 
 # --- Caminho do script de montagem ---
 MOUNT_SCRIPT_PATH = "/home/kali/mount_disks.sh"
@@ -450,12 +450,10 @@ class App(QMainWindow):
             QMessageBox.critical(self, "Erro ao Abrir Manual",
                                  f"Não foi possível abrir o manual.\nVerifique se 'xdg-open' está instalado.\n\nErro: {e}")
 
-    # --- FUNÇÃO MODIFICADA ---
     def show_system_info(self):
         """Coleta e exibe as informações do sistema em um diálogo."""
         # Executa o script de montagem ANTES de coletar as infos, se necessário
         if not self._run_mount_script_if_needed():
-             # Se o script falhar (ex: erro de permissão), não continua
              return
 
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
@@ -478,41 +476,51 @@ class App(QMainWindow):
             QApplication.restoreOverrideCursor()
             QMessageBox.critical(self, "Erro", f"Falha ao coletar informações do sistema: {e}")
 
+    # --- FUNÇÃO _gather_system_info (MODIFICADA) ---
     def _gather_system_info(self):
         """Executa comandos no shell para coletar informações."""
         info = []
 
-        def run_cmd(cmd):
+        def run_cmd(cmd, check_return_code=True): # Adicionado parâmetro check_return_code
             try:
                 env = os.environ.copy()
                 env['LANG'] = 'C' # Garante saída em inglês
-                return subprocess.run(cmd, capture_output=True, text=True, timeout=5, check=True, env=env).stdout.strip()
+                # Usar check=check_return_code
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, check=check_return_code, env=env)
+                return result.stdout.strip() # Retorna stdout mesmo se check=False
+            except subprocess.TimeoutExpired:
+                 return f"TIMEOUT: Comando '{' '.join(cmd)}' demorou demais."
             except subprocess.CalledProcessError as e:
-                return f"Erro ao executar '{' '.join(cmd)}': {e.stderr}"
+                # Retorna stderr se disponível e relevante
+                err_msg = e.stderr.strip() if e.stderr else str(e)
+                return f"ERRO ({e.returncode}): Ao executar '{' '.join(cmd)}': {err_msg}"
             except FileNotFoundError:
-                return f"Comando '{cmd[0]}' não encontrado."
+                return f"ERRO: Comando '{cmd[0]}' não encontrado."
             except Exception as e:
-                return f"Erro: {e}"
+                return f"ERRO Inesperado: {e}"
 
         # 1. CPU
         cpu_output = run_cmd(['lscpu'])
         cpu_model = "Não disponível"
-        for line in cpu_output.split('\n'):
-            if line.startswith("Model name:"):
-                cpu_model = line.split(":", 1)[1].strip()
-                break
+        if not cpu_output.startswith("ERRO") and not cpu_output.startswith("TIMEOUT"):
+            for line in cpu_output.split('\n'):
+                if line.startswith("Model name:"):
+                    cpu_model = line.split(":", 1)[1].strip()
+                    break
+        else:
+            cpu_model = cpu_output # Mostra a mensagem de erro
         info.append(f"CPU: {cpu_model}")
 
         # 2. RAM
         ram_output = run_cmd(['grep', 'MemTotal', '/proc/meminfo'])
         ram_total = "Não disponível"
-        if not ram_output.startswith("Erro") and not ram_output.startswith("Comando"):
+        if not ram_output.startswith("ERRO") and not ram_output.startswith("TIMEOUT"):
             try:
                 mem_kb = int(ram_output.split()[1])
                 mem_gb = mem_kb / (1024 * 1024) # Converte KiB para GiB
                 ram_total = f"{mem_gb:.1f} GB"
             except Exception as e:
-                ram_total = f"Erro ao parsear: {e}"
+                ram_total = f"Erro ao parsear RAM: {e}"
         else:
             ram_total = ram_output
         info.append(f"Memória RAM Total: {ram_total}")
@@ -525,12 +533,12 @@ class App(QMainWindow):
         try:
             boot_device_full = run_cmd(['findmnt', '-n', '-o', 'SOURCE', '--target', '/run/live/medium'])
 
-            if boot_device_full and not boot_device_full.startswith("Erro"):
+            if boot_device_full and not boot_device_full.startswith("ERRO"):
                 boot_device_base = os.path.basename(boot_device_full)
 
                 boot_disk_parent = run_cmd(['lsblk', '-n', '-o', 'PKNAME', f'/dev/{boot_device_base}'])
 
-                if boot_disk_parent and not boot_disk_parent.startswith("Erro"):
+                if boot_disk_parent and not boot_disk_parent.startswith("ERRO"):
                     boot_disk_to_ignore = boot_disk_parent
                     info.append(f"(Ignorando disco de boot: {boot_disk_to_ignore})")
                 else:
@@ -542,56 +550,59 @@ class App(QMainWindow):
                         boot_disk_to_ignore = boot_device_base # Fallback
                         info.append(f"(Ignorando dispositivo de boot: {boot_disk_to_ignore})")
             else:
-                 info.append("(Não foi possível identificar o dispositivo de boot, mostrando tudo.)")
+                 info.append(f"(Aviso: {boot_device_full}, mostrando tudo.)")
+                 boot_disk_to_ignore = "" # Garante que não filtre nada
         except Exception as e:
             info.append(f"(Erro ao identificar disco de boot: {e})")
             boot_disk_to_ignore = ""
 
-        disk_output_raw = run_cmd(['lsblk', '-l', '-o', 'NAME,SIZE,FSTYPE,TYPE,MOUNTPOINT'])
+        # --- Comando lsblk MODIFICADO ---
+        # Adicionado LABEL
+        disk_output_raw = run_cmd(['lsblk', '-l', '-o', 'NAME,SIZE,FSTYPE,LABEL,TYPE,MOUNTPOINT'])
+        # --- FIM DA MODIFICAÇÃO ---
 
-        filtered_disk_output = []
-        header = True
-        for line in disk_output_raw.split('\n'):
-            if header:
+        if not disk_output_raw.startswith("ERRO") and not disk_output_raw.startswith("TIMEOUT"):
+            filtered_disk_output = []
+            header = True
+            for line in disk_output_raw.split('\n'):
+                if header:
+                    filtered_disk_output.append(line)
+                    header = False
+                    continue
+
+                try:
+                    name_col = line.split()[0]
+                except IndexError:
+                    continue
+
+                if name_col.startswith('loop'):
+                    continue
+
+                if boot_disk_to_ignore and name_col.startswith(boot_disk_to_ignore):
+                    continue
+
                 filtered_disk_output.append(line)
-                header = False
-                continue
 
-            try:
-                name_col = line.split()[0]
-            except IndexError:
-                continue
-
-            if name_col.startswith('loop'):
-                continue
-
-            if boot_disk_to_ignore and name_col.startswith(boot_disk_to_ignore):
-                continue
-
-            filtered_disk_output.append(line)
-
-        if len(filtered_disk_output) <= 1:
-             info.append("Nenhum disco detectado (além do disco de boot).")
+            if len(filtered_disk_output) <= 1:
+                 info.append("Nenhum disco detectado (além do disco de boot).")
+            else:
+                info.append("\n".join(filtered_disk_output))
         else:
-            info.append("\n".join(filtered_disk_output))
+            info.append(disk_output_raw) # Mostra a mensagem de erro
+
 
         # 4. BitLocker
         info.append("\nPartições BitLocker:")
         info.append("="*40)
-        try:
-            bitlocker_result = subprocess.run(
-                ['sudo', '-n', 'dislocker-find'],
-                capture_output=True, text=True, timeout=5
-            )
-            if bitlocker_result.returncode == 0:
-                bitlocker_output = bitlocker_result.stdout.strip()
-                info.append(bitlocker_output if bitlocker_output else "Nenhuma partição BitLocker encontrada.")
-            else:
-                info.append("Falha ao verificar (requer privilégios de root\n ou 'sudo' está pedindo senha).")
-        except FileNotFoundError:
-            info.append("Comando 'dislocker-find' não encontrado.")
-        except Exception as e:
-            info.append(f"Erro ao executar dislocker-find: {e}")
+        # Executa 'sudo dislocker-find' sem verificar o código de retorno
+        bitlocker_output = run_cmd(['sudo', 'dislocker-find'], check_return_code=False)
+
+        # Verifica se a saída contém 'Erro', 'não encontrado', ou 'TIMEOUT'
+        if bitlocker_output.startswith("ERRO") or bitlocker_output.startswith("TIMEOUT"):
+            info.append(bitlocker_output) # Mostra a mensagem de erro
+        else:
+            # Se não houve erro de execução, exibe a saída (mesmo que vazia)
+            info.append(bitlocker_output if bitlocker_output else "Nenhuma partição BitLocker encontrada.")
 
         return "\n".join(info)
 
@@ -645,7 +656,6 @@ class App(QMainWindow):
             self.manual_selected_path = path
             self.manual_path_label.setText(f"Selecionado: {path}")
 
-    # --- FUNÇÃO MODIFICADA ---
     def _run_mount_script_if_needed(self):
         """
         Chama o script de montagem em um terminal, se ele existir e
@@ -653,7 +663,6 @@ class App(QMainWindow):
         Retorna True se o script foi chamado com sucesso (ou já tinha sido),
         False se houve erro ou o script não existe.
         """
-        # Se já rodou, retorna sucesso imediatamente
         if self.mount_script_run:
             print("Mount script já executado nesta sessão.")
             return True
@@ -691,7 +700,6 @@ class App(QMainWindow):
         finally:
              QApplication.restoreOverrideCursor() # Restaura o cursor
 
-        # Marca como rodado independentemente do sucesso, para não tentar de novo
         self.mount_script_run = True
         return success
 
