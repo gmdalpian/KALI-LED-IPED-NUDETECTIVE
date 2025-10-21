@@ -3,37 +3,36 @@
 # iped_executor.sh
 # Script "motor" para execução do IPED.
 # Recebe parâmetros do launcher Python e executa a lógica de processamento.
-# (Versão com sudo interno, exceto mount triage)
+# (Versão com mount Triage usando uid/gid)
 #
 
 # --- Constantes ---
 IPED_DIR="/usr/local/bin/iped"
-# Adicionado sudo à base do comando Java/IPED
 JAVA_CMD_BASE="sudo java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar"
 OUTPUT_DIR_DESKTOP="/home/kali/Desktop/IPED-CASO"
 OUTPUT_DIR_TRIAGE_BASE="/home/kali/Desktop/triage"
 OUTPUT_DIR_TRIAGE_CASE="$OUTPUT_DIR_TRIAGE_BASE/IPED-CASO"
-COMMAND_LOG_FILE="/home/kali/Desktop/iped_comando_executado.log" # Arquivo de log no Desktop
+COMMAND_LOG_FILE="/home/kali/Desktop/iped_comando_executado.log"
 
 # --- Variáveis Globais ---
-CONTINUE_PROCESSING=false # Flag para indicar se vamos continuar um processamento
-RECOVERED_CMD=""          # Armazena o comando recuperado do log para --continue
+CONTINUE_PROCESSING=false
+RECOVERED_CMD=""
+KALI_UID=1000 # UID Padrão do usuário 'kali'
+KALI_GID=1000 # GID Padrão do usuário 'kali'
 
 # --- Funções de Lógica ---
 
 # Função para lidar com BitLocker
 handle_bitlocker() {
     local disk_device=$1
-    local cmdline_ref=$2 # Passa o nome da variável que armazena os discos
+    local cmdline_ref=$2
     local root_system=$3
-
     local disk_basename=$(basename "$disk_device")
+
     if ! echo "$disk_basename" | grep -q "$root_system"; then
         echo "Detectado bitlocker em $disk_device"
-        # Usar sudo para criar diretórios fora do /home/kali
         sudo mkdir -p /dislocker/bitlocker_$disk_basename
 
-        # Usar sudo para dislocker e test
         sudo dislocker -V $disk_device -- /dislocker/bitlocker_$disk_basename -r
         if sudo test -f /dislocker/bitlocker_$disk_basename/dislocker-file; then
             echo "Bitlocker (sem senha) montado."
@@ -42,7 +41,6 @@ handle_bitlocker() {
         else
             while true; do
                 BITLOCKER_INFO=('', '')
-                # Usar sudo para cryptsetup
                 while read line ; do
                     [[ $line =~ "Description:" ]] && BITLOCKER_INFO[0]=$line
                     [[ $line =~ "VMK protected with recovery passphrase" ]] && BITLOCKER_INFO[1]=${previousline^^}
@@ -73,7 +71,7 @@ handle_bitlocker() {
                     fi
                 else
                     echo "Usuário cancelou a inserção de senha do Bitlocker."
-                    break # Cancela
+                    break
                 fi
             done
         fi
@@ -81,6 +79,7 @@ handle_bitlocker() {
 }
 
 # Lógica para encontrar e montar partição de triagem
+# --- FUNÇÃO MODIFICADA (Lógica de montagem Triage com uid/gid) ---
 setup_output_dir() {
     echo "Configurando diretório de saída..."
     TRIAGE_PARTITION_FOUND=false
@@ -90,7 +89,6 @@ setup_output_dir() {
     local root_system_triage=${root_system:5:${#root_system}-6}
     [ -z "$root_system_triage" ] && root_system_triage='null'
 
-    # Usar sudo para blkid
     while read line ; do
         local part=$(echo "$line" | awk '{print $1}')
         if echo "$part" | grep -q "$root_system_triage"; then
@@ -107,29 +105,26 @@ setup_output_dir() {
         OUTPUT_DIR=$OUTPUT_DIR_TRIAGE_CASE
         DESKTOP_FILE="IPED-Caso-triage.desktop"
 
-        # Garante que o diretório base exista e pertença ao kali ANTES de montar
+        # Garante que o diretório base exista (sem sudo)
         if [ ! -d "$OUTPUT_DIR_TRIAGE_BASE" ]; then
              echo "Criando diretório base de triagem: $OUTPUT_DIR_TRIAGE_BASE"
              mkdir -p "$OUTPUT_DIR_TRIAGE_BASE"
-             # Não precisa de sudo chown aqui, pois mkdir como kali cria com dono kali
         fi
 
-        # Verifica se JÁ está montado (talvez pelo mount_disks.sh)
+        # Verifica se JÁ está montado
         if findmnt --mountpoint $OUTPUT_DIR_TRIAGE_BASE &> /dev/null; then
              echo "Partição Triage já está montada em $OUTPUT_DIR_TRIAGE_BASE."
-             # Verifica se o ponto de montagem tem permissão de escrita para o usuário atual (kali)
-             if [ ! -w "$OUTPUT_DIR_TRIAGE_BASE" ]; then
-                  echo "AVISO: Ponto de montagem $OUTPUT_DIR_TRIAGE_BASE não tem permissão de escrita para o usuário kali."
-                  echo "Tentando remontar com permissões..."
-                  # Tenta desmontar primeiro (pode falhar se estiver em uso)
+             # Verifica se o dono já é o kali (pode acontecer se o mount_disks.sh já rodou com uid/gid)
+             if [ "$(stat -c '%u' "$OUTPUT_DIR_TRIAGE_BASE")" != "$KALI_UID" ]; then
+                  echo "Ponto de montagem não pertence ao usuário kali. Tentando remontar com opções corretas..."
+                  # Tenta desmontar primeiro (precisa de sudo)
                   sudo umount "$OUTPUT_DIR_TRIAGE_BASE" &> /dev/null
-                  # Tenta montar novamente SEM sudo
-                  echo "Tentando montar $triage_part_device em $OUTPUT_DIR_TRIAGE_BASE sem sudo..."
-                  mount -o rw $triage_part_device $OUTPUT_DIR_TRIAGE_BASE # TENTA SEM SUDO
-                  if [ $? -ne 0 ]; then
-                       echo "ERRO: Falha ao montar partição Triage sem sudo. Verifique permissões/fstab ou execute este script como root."
-                       TRIAGE_PARTITION_FOUND=false
-                       zenity --error --text="Falha ao montar a partição Triage como usuário 'kali'.\nVerifique as permissões ou execute o launcher como root.\nO SWAP não será criado e o caso será salvo no Desktop." --timeout=15
+                  # Tenta montar novamente COM sudo e opções uid/gid
+                  echo "Montando $triage_part_device em $OUTPUT_DIR_TRIAGE_BASE com sudo e uid/gid..."
+                  if ! sudo mount -o rw,uid=$KALI_UID,gid=$KALI_GID $triage_part_device $OUTPUT_DIR_TRIAGE_BASE; then
+                       echo "ERRO: Falha ao remontar a partição Triage com uid/gid."
+                       TRIAGE_PARTITION_FOUND=false # Reverte para usar Desktop
+                       zenity --error --text="Falha ao ajustar permissões da partição Triage.\nO SWAP não será criado e o caso será salvo no Desktop." --timeout=10
                        OUTPUT_DIR=$OUTPUT_DIR_DESKTOP
                        DESKTOP_FILE="IPED-Caso.desktop"
                        LOG_FILE_OPT=""
@@ -137,47 +132,45 @@ setup_output_dir() {
                   fi
              fi
         else
-            # --- MONTAGEM SEM SUDO ---
-            echo "Tentando montar $triage_part_device em $OUTPUT_DIR_TRIAGE_BASE sem sudo..."
-            mount -o rw $triage_part_device $OUTPUT_DIR_TRIAGE_BASE # TENTA SEM SUDO
-            if [ $? -ne 0 ]; then
-                echo "ERRO: Falha ao montar partição Triage sem sudo. Verifique permissões/fstab ou execute este script como root."
+            # --- MONTAGEM COM SUDO e UID/GID ---
+            echo "Montando $triage_part_device em $OUTPUT_DIR_TRIAGE_BASE com sudo e uid=$KALI_UID,gid=$KALI_GID..."
+            if ! sudo mount -o rw,uid=$KALI_UID,gid=$KALI_GID $triage_part_device $OUTPUT_DIR_TRIAGE_BASE; then
+                echo "ERRO: Falha ao montar a partição Triage com sudo e uid/gid."
                 TRIAGE_PARTITION_FOUND=false
-                zenity --error --text="Falha ao montar a partição Triage como usuário 'kali'.\nVerifique as permissões ou execute o launcher como root.\nO SWAP não será criado e o caso será salvo no Desktop." --timeout=15
+                zenity --error --text="Falha ao montar a partição Triage.\nO SWAP não será criado e o caso será salvo no Desktop." --timeout=10
                 OUTPUT_DIR=$OUTPUT_DIR_DESKTOP
                 DESKTOP_FILE="IPED-Caso.desktop"
                 LOG_FILE_OPT=""
                 KEYWORD_FILE_OPT="-l $IPED_DIR/palavras-chave.txt"
             fi
-            # --- FIM DA MONTAGEM SEM SUDO ---
+            # --- FIM DA MONTAGEM ---
         fi
 
 
-        # Só continua a lógica de Triage se a montagem (com ou sem sudo) foi bem sucedida
+        # Só continua a lógica de Triage se a partição foi encontrada E montada
         if $TRIAGE_PARTITION_FOUND; then
             LOG_FILE_OPT="-log $OUTPUT_DIR_TRIAGE_BASE/IPED-Processamento-$(date +%y%m%d%H%M).log"
-            # Usar sudo para testar e copiar arquivos fora do /home/kali
-            if sudo test -f "$OUTPUT_DIR_TRIAGE_BASE/palavras-chave.txt"; then
+            # test sem sudo, pois kali deve ser dono
+            if test -f "$OUTPUT_DIR_TRIAGE_BASE/palavras-chave.txt"; then
                 KEYWORD_FILE_OPT="-l $OUTPUT_DIR_TRIAGE_BASE/palavras-chave.txt"
             else
                 KEYWORD_FILE_OPT="-l $IPED_DIR/palavras-chave.txt"
             fi
-
+            # cp com sudo
             sudo cp "$IPED_DIR/LocalConfig-triage.txt" "$IPED_DIR/LocalConfig.txt"
 
-            # Lógica de SWAP (precisa de sudo)
+            # Lógica de SWAP
             if [ "$PROFILE" == "csam_triage" ] || [ "$PROFILE" == "triage" ]; then
                 if [ "$(cat /proc/swaps | wc -l)" -le 1 ]; then
                     local swap_file_path="$OUTPUT_DIR_TRIAGE_BASE/swapfile"
-                    # Testar arquivo sem sudo, pois diretório deve ser do kali
+                    # test sem sudo
                     if test -f "$swap_file_path"; then
                          echo "Arquivo SWAP encontrado ($swap_file_path). Ativando..."
-                         sudo swapon "$swap_file_path" # Precisa de sudo
+                         sudo swapon "$swap_file_path"
                          if [ $? -ne 0 ]; then
                              echo "Aviso: Falha ao ativar SWAP existente. Tentando recriar..."
-                             sudo swapoff "$swap_file_path" &> /dev/null # Precisa de sudo
-                             # rm sem sudo, pois arquivo deve ser do kali
-                             rm -f "$swap_file_path"
+                             sudo swapoff "$swap_file_path" &> /dev/null
+                             rm -f "$swap_file_path" # rm sem sudo
                          else
                               local create_swap=false
                          fi
@@ -185,6 +178,7 @@ setup_output_dir() {
 
                     if [ ! -f "$swap_file_path" ] || [ "$create_swap" != "false" ]; then
                          echo "Criando arquivo de memoria virtual swap..."
+                         # df sem sudo
                          available_kb=$(df -k "$OUTPUT_DIR_TRIAGE_BASE" | tail -n 1 | awk '{print $4}')
                          available_kb=${available_kb:-0}
 
@@ -216,7 +210,7 @@ setup_output_dir() {
                                        rm -f "$swap_file_path" # rm sem sudo
                                    fi
                               else
-                                   echo "ERRO: Falha ao criar o arquivo SWAP com truncate."
+                                   echo "ERRO: Falha ao criar o arquivo SWAP com truncate (verifique permissões em $OUTPUT_DIR_TRIAGE_BASE)."
                               fi
                          fi
                     fi
@@ -244,7 +238,14 @@ setup_output_dir() {
     echo "Diretório de saída definido como: $OUTPUT_DIR"
 
     # --- VERIFICA SE O DIRETÓRIO JÁ EXISTE ---
-    # Usa sudo para rm e mkdir caso o diretório seja fora do /home/kali ou tenha permissões restritas
+    # mkdir/rm sem sudo se for no Desktop, com sudo se for Triage (root pode ter criado)
+    local use_sudo_for_output_dir="false"
+    if [[ "$OUTPUT_DIR" == "$OUTPUT_DIR_TRIAGE_CASE" ]]; then
+        # Se for Triage, pode ser que a montagem anterior falhou e o diretório
+        # não pertence ao kali, então usamos sudo por segurança.
+        use_sudo_for_output_dir="true"
+    fi
+
     if [ -d "$OUTPUT_DIR" ]; then
         echo "Diretório de saída '$OUTPUT_DIR' já existe."
         if zenity --question --title="Caso Existente Encontrado" \
@@ -254,59 +255,56 @@ setup_output_dir() {
             --width=450;
         then
             echo "Usuário escolheu processar novamente. Apagando diretório existente..."
-            sudo rm -rf "$OUTPUT_DIR" # Usar sudo
+            if $use_sudo_for_output_dir; then sudo rm -rf "$OUTPUT_DIR"; else rm -rf "$OUTPUT_DIR"; fi
             if [ $? -ne 0 ]; then
                 zenity --error --text="Falha ao apagar o diretório '$OUTPUT_DIR'.\nVerifique as permissões."
                 exit 6
             fi
-            sudo mkdir -p "$OUTPUT_DIR" # Usar sudo
-            # Garante que o usuário kali seja o dono do diretório recém-criado
-            sudo chown kali:kali "$OUTPUT_DIR"
+            if $use_sudo_for_output_dir; then sudo mkdir -p "$OUTPUT_DIR" && sudo chown $KALI_UID:$KALI_GID "$OUTPUT_DIR"; else mkdir -p "$OUTPUT_DIR"; fi
             CONTINUE_PROCESSING=false
         else
             echo "Usuário escolheu continuar o processamento anterior."
             CONTINUE_PROCESSING=true
             if [ -f "$COMMAND_LOG_FILE" ]; then
-                 local escaped_output_dir=$(sed 's/[&/\]/\\&/g' <<<"$OUTPUT_DIR")
+                 local escaped_output_dir=$(sed 's#[&/\]#\\&#g' <<<"$OUTPUT_DIR")
                  local original_cmd=$(grep "$escaped_output_dir" "$COMMAND_LOG_FILE" | tail -n 1 | sed 's/^\[.*\] Executando: //')
 
                  if [ -z "$original_cmd" ]; then
-                      zenity --error --text="Não foi possível encontrar o comando anterior para '$OUTPUT_DIR' no log.\nNão é possível continuar. Verifique o arquivo '$COMMAND_LOG_FILE'."
-                      exit 7
+                      zenity --error --text="Não foi possível encontrar o comando anterior para '$OUTPUT_DIR' no log." ; exit 7
                  else
                       echo "Comando anterior recuperado: $original_cmd"
                       local original_profile=$(echo "$original_cmd" | grep -o '\-profile [^ ]*' | awk '{print $2}')
                       if [ -z "$original_profile" ]; then
-                          zenity --error --text="Não foi possível extrair o perfil do comando anterior.\nNão é possível continuar."
-                          exit 8
+                          zenity --error --text="Não foi possível extrair o perfil do comando anterior." ; exit 8
                       fi
                       echo "Usando o perfil original do caso: $original_profile (Seleção atual '$PROFILE' ignorada)."
                       PROFILE=$original_profile
 
-                      # Insere --continue após '-jar iped.jar'
                       if echo "$original_cmd" | grep -q -- "-jar iped.jar"; then
                           if ! echo "$original_cmd" | grep -q -- '--continue'; then
                                RECOVERED_CMD=$(echo "$original_cmd" | sed 's/-jar iped\.jar/-jar iped.jar --continue/')
                                echo "Comando final para continuar: $RECOVERED_CMD"
                           else
-                               echo "Flag --continue já presente no comando original. Usando como está."
-                               RECOVERED_CMD="$original_cmd"
+                               echo "Flag --continue já presente. Usando como está." ; RECOVERED_CMD="$original_cmd"
                           fi
                       else
-                           zenity --error --text="Formato de comando inesperado no log. Não foi possível inserir '--continue'.\nComando encontrado: $original_cmd"
-                           exit 9
+                           zenity --error --text="Formato de comando inesperado no log: $original_cmd" ; exit 9
                       fi
                  fi
             else
-                 zenity --error --text="Arquivo de log '$COMMAND_LOG_FILE' não encontrado.\nNão é possível recuperar o comando anterior para continuar."
-                 exit 7
+                 zenity --error --text="Arquivo de log '$COMMAND_LOG_FILE' não encontrado." ; exit 7
             fi
         fi
     else
-        # Diretório não existe, cria normalmente (com sudo e ajusta dono)
-        sudo mkdir -p "$OUTPUT_DIR" # Usar sudo
-        sudo chown kali:kali "$OUTPUT_DIR"
+        # Diretório não existe, cria
+        if $use_sudo_for_output_dir; then sudo mkdir -p "$OUTPUT_DIR" && sudo chown $KALI_UID:$KALI_GID "$OUTPUT_DIR"; else mkdir -p "$OUTPUT_DIR"; fi
         CONTINUE_PROCESSING=false
+    fi
+
+    # Garante que o diretório de saída existe e pertence a kali
+    if [ ! -d "$OUTPUT_DIR" ] || [ "$(stat -c '%u' "$OUTPUT_DIR")" != "$KALI_UID" ]; then
+        zenity --error --text="Falha ao criar ou definir permissões para o diretório de saída: $OUTPUT_DIR"
+        exit 10
     fi
 
     echo "Diretório de saída final: $OUTPUT_DIR"
@@ -339,29 +337,27 @@ build_target_string() {
                 fi
             done <<< "$(lsblk -l | grep '\dm\b')"
 
-            # 3. VSS - Precisa de sudo para acessar /vss e criar links
+            # 3. VSS - Precisa de sudo
             if [ -d "/vss" ]; then
                 echo "Verificando VSS..."
                 sudo mkdir -p /vss_iped
                 while read line ; do
-                    # ls precisa de sudo
                     for vss in $(sudo ls /vss/$line 2>/dev/null); do
                         echo "Achou vss: /vss/$line/$vss"
                         sudo ln -sf "/vss/$line/$vss" "/vss_iped/$line-$vss.dd"
                         TARGET_STRING+=" -d /vss_iped/$line-$vss.dd"
                     done
-                done <<< "$(sudo ls /vss/ 2>/dev/null)" # ls precisa de sudo
+                done <<< "$(sudo ls /vss/ 2>/dev/null)"
             fi
 
             # 4. BitLocker - handle_bitlocker já usa sudo internamente
             echo "Verificando Bitlocker..."
-            # mkdir precisa de sudo
             sudo mkdir -p /dislocker
             while read line ; do
                 if [ ! -z "$line" ]; then
                     handle_bitlocker "$line" TARGET_STRING "$root_system"
                 fi
-            done <<< "$(sudo dislocker-find)" # Precisa de sudo
+            done <<< "$(sudo dislocker-find)"
             ;;
 
         "mounted_files")
@@ -393,15 +389,15 @@ build_target_string() {
 # Executa tarefas pós-processamento
 run_post_processing() {
     echo "Iniciando pós-processamento..."
-    # cp não precisa de sudo se o destino for do usuário kali
+    # cp sem sudo para Desktop
     cp "$IPED_DIR/Ferramenta_de_Pesquisa.sh" "$OUTPUT_DIR/"
     cp "$IPED_DIR/$DESKTOP_FILE" "/home/kali/Desktop/IPED-Caso.desktop"
 
-    # Define o proprietário como 'kali' (precisa de sudo)
-    local output_parent_dir=$(dirname "$OUTPUT_DIR")
-    sudo chown -R kali:kali "$output_parent_dir" || echo "Aviso: Falha ao mudar proprietário de $output_parent_dir"
+    # Define o proprietário como 'kali' (precisa de sudo apenas para o atalho)
+    # OUTPUT_DIR já deve pertencer a kali devido à lógica em setup_output_dir
     sudo chown kali:kali "/home/kali/Desktop/IPED-Caso.desktop" || echo "Aviso: Falha ao mudar proprietário do atalho"
 
+    # cd sem sudo
     cd "$OUTPUT_DIR"
     if [ -f "./Ferramenta_de_Pesquisa.sh" ]; then
         # Executa como kali (sem sudo)
@@ -441,7 +437,7 @@ echo "---------------------------------------------"
 
 
 # 2. Setup
-# cd não precisa de sudo
+# cd sem sudo
 cd "$IPED_DIR" || { echo "Erro: Diretório $IPED_DIR não encontrado."; exit 1; }
 # mplayer pode precisar de sudo
 sudo mplayer &> /dev/null # Bugfix
