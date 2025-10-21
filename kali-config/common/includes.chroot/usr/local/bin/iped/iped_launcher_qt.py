@@ -16,22 +16,22 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 from PyQt6.QtCore import Qt, QSize
 
-# --- Dicionários de Descrição ---
+# --- Dicionários de Descrição (ATUALIZADOS) ---
 PROFILE_INFO = {
     "csam_triage": {
-        "title": "CSAM-Triage (Recomendado)",
+        "title": "CSAM-Triage", # Removido (Recomendado) do título
         "icon": "security-high",
-        "description": "<b>Perfil otimizado para detecção de CSAM (Recomendado)</b>. Inclui modelos de IA (CNN), verificação de hashes (Project Vic) e busca por assinaturas específicas."
+        "description": "Perfil otimizado para detecção de <b>CSAM - Child Sexual Abuse Material (arquivos contendo cenas de abuso sexual infanto-juvenil)</b>. Inclui modelos de IA utilizando redes neurais para detecção de arquivos desconhecidos e verificação de hashes para detectar arquivos conhecidos, caso esteja presente o arquivo de hashes do IPED no volume IPED-TRIAGE (veja manual de uso). Processa somente imagens e vídeos, excluindo todos os demais arquivos do caso."
     },
     "triage": {
-        "title": "Triage (Completo)",
+        "title": "Triage (Documentos, e-mails etc.)",
         "icon": "system-search",
-        "description": "<b>Perfil de triagem padrão</b>. Mais completo, inclui <i>carving</i> de arquivos deletados e extrai um conjunto maior de metadados."
+        "description": "Indexa o conteúdo de arquivos de alguns formatos de documento (office, pdf, html, e-mails, histórico de Internet etc.) em diretórios comuns do usuário. Analisadores (parsers) de imagem e vídeo estão desativados. Algumas pastas, como aquelas que contêm arquivos de sistema, não são incluídas no caso. Assim, você pode fazer algumas buscas indexadas em cenários de triagem. O tempo para concluir o processamento é muito imprevisível, depende muito do volume de dados do usuário."
     },
     "fastmode": {
         "title": "FastMode (Rápido)",
         "icon": "preferences-system-performance",
-        "description": "<b>Perfil mais rápido</b>, focado apenas em artefatos comuns (fotos, vídeos, chats) e indexação. Ideal para uma análise *muito* rápida."
+        "description": "Modo de processamento mais rápido para pré-visualizar dados. Todos os recursos que precisam de acesso ao conteúdo do arquivo são desativados, como cálculo de hash, análise de assinatura, indexação, carving, varredura de regex (regex scanning) e geração de miniaturas. Basicamente, ele executa um ls na árvore do sistema de arquivos. Mas os arquivos ainda são categorizados com base na extensão, você pode pré-visualizar o conteúdo do arquivo, navegar na árvore do sistema de arquivos, usar a galeria de imagens e aplicar filtros com base em quaisquer metadados do arquivo, como nome, caminho, tamanho ou horários MAC (mac times)."
     }
 }
 
@@ -44,7 +44,7 @@ TARGET_INFO = {
     "all_disks": {
         "title": "Discos (Completo/Lento)",
         "icon": "drive-harddisk",
-        "description": "<b>Processa todos os dispositivos</b>: discos físicos, partições, volumes LDM (RAID), VSS (Shadow Copies) e BitLocker. É o método mais completo, porém *muito mais lento*."
+        "description": "<b>Processa todos os dispositivos</b>: discos físicos, partições, volumes LDM (RAID), VSS (Shadow Copies) e BitLocker. É o método mais completo, porém mais lento." # Removido asterisco extra
     },
     "manual_dir": {
         "title": "Selecionar Diretório/Imagem",
@@ -53,7 +53,7 @@ TARGET_INFO = {
     }
 }
 
-# Filtro de arquivos de imagem forense
+# Filtro de arquivos de imagem forense (ATUALIZADO)
 FORENSIC_IMAGE_FILTER = "Imagens Forenses (*.E01 *.Ex01 *.e01 *.ex01 *.dd *.raw *.img *.vmdk *.vhd *.AFF *.ufdr *.UFDR);;Todos os Arquivos (*)"
 
 # --- Caminho do script de montagem ---
