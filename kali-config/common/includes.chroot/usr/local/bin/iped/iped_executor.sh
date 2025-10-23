@@ -3,7 +3,7 @@
 # iped_executor.sh
 # Script "motor" para execução do IPED.
 # Recebe parâmetros do launcher Python e executa a lógica de processamento.
-# (Versão com mount Triage usando uid/gid)
+# (Versão com sudo rm -rf incondicional ao apagar caso existente)
 #
 
 # --- Constantes ---
@@ -79,7 +79,7 @@ handle_bitlocker() {
 }
 
 # Lógica para encontrar e montar partição de triagem
-# --- FUNÇÃO MODIFICADA (Lógica de montagem Triage com uid/gid) ---
+# --- FUNÇÃO MODIFICADA (Lógica de rm e mkdir) ---
 setup_output_dir() {
     echo "Configurando diretório de saída..."
     TRIAGE_PARTITION_FOUND=false
@@ -114,16 +114,13 @@ setup_output_dir() {
         # Verifica se JÁ está montado
         if findmnt --mountpoint $OUTPUT_DIR_TRIAGE_BASE &> /dev/null; then
              echo "Partição Triage já está montada em $OUTPUT_DIR_TRIAGE_BASE."
-             # Verifica se o dono já é o kali (pode acontecer se o mount_disks.sh já rodou com uid/gid)
              if [ "$(stat -c '%u' "$OUTPUT_DIR_TRIAGE_BASE")" != "$KALI_UID" ]; then
                   echo "Ponto de montagem não pertence ao usuário kali. Tentando remontar com opções corretas..."
-                  # Tenta desmontar primeiro (precisa de sudo)
                   sudo umount "$OUTPUT_DIR_TRIAGE_BASE" &> /dev/null
-                  # Tenta montar novamente COM sudo e opções uid/gid
                   echo "Montando $triage_part_device em $OUTPUT_DIR_TRIAGE_BASE com sudo e uid/gid..."
                   if ! sudo mount -o rw,uid=$KALI_UID,gid=$KALI_GID $triage_part_device $OUTPUT_DIR_TRIAGE_BASE; then
                        echo "ERRO: Falha ao remontar a partição Triage com uid/gid."
-                       TRIAGE_PARTITION_FOUND=false # Reverte para usar Desktop
+                       TRIAGE_PARTITION_FOUND=false
                        zenity --error --text="Falha ao ajustar permissões da partição Triage.\nO SWAP não será criado e o caso será salvo no Desktop." --timeout=10
                        OUTPUT_DIR=$OUTPUT_DIR_DESKTOP
                        DESKTOP_FILE="IPED-Caso.desktop"
@@ -132,7 +129,7 @@ setup_output_dir() {
                   fi
              fi
         else
-            # --- MONTAGEM COM SUDO e UID/GID ---
+            # MONTAGEM COM SUDO e UID/GID
             echo "Montando $triage_part_device em $OUTPUT_DIR_TRIAGE_BASE com sudo e uid=$KALI_UID,gid=$KALI_GID..."
             if ! sudo mount -o rw,uid=$KALI_UID,gid=$KALI_GID $triage_part_device $OUTPUT_DIR_TRIAGE_BASE; then
                 echo "ERRO: Falha ao montar a partição Triage com sudo e uid/gid."
@@ -143,7 +140,6 @@ setup_output_dir() {
                 LOG_FILE_OPT=""
                 KEYWORD_FILE_OPT="-l $IPED_DIR/palavras-chave.txt"
             fi
-            # --- FIM DA MONTAGEM ---
         fi
 
 
@@ -166,10 +162,10 @@ setup_output_dir() {
                     # test sem sudo
                     if test -f "$swap_file_path"; then
                          echo "Arquivo SWAP encontrado ($swap_file_path). Ativando..."
-                         sudo swapon "$swap_file_path"
+                         sudo swapon "$swap_file_path" # Precisa de sudo
                          if [ $? -ne 0 ]; then
                              echo "Aviso: Falha ao ativar SWAP existente. Tentando recriar..."
-                             sudo swapoff "$swap_file_path" &> /dev/null
+                             sudo swapoff "$swap_file_path" &> /dev/null # Precisa de sudo
                              rm -f "$swap_file_path" # rm sem sudo
                          else
                               local create_swap=false
@@ -238,14 +234,6 @@ setup_output_dir() {
     echo "Diretório de saída definido como: $OUTPUT_DIR"
 
     # --- VERIFICA SE O DIRETÓRIO JÁ EXISTE ---
-    # mkdir/rm sem sudo se for no Desktop, com sudo se for Triage (root pode ter criado)
-    local use_sudo_for_output_dir="false"
-    if [[ "$OUTPUT_DIR" == "$OUTPUT_DIR_TRIAGE_CASE" ]]; then
-        # Se for Triage, pode ser que a montagem anterior falhou e o diretório
-        # não pertence ao kali, então usamos sudo por segurança.
-        use_sudo_for_output_dir="true"
-    fi
-
     if [ -d "$OUTPUT_DIR" ]; then
         echo "Diretório de saída '$OUTPUT_DIR' já existe."
         if zenity --question --title="Caso Existente Encontrado" \
@@ -255,12 +243,16 @@ setup_output_dir() {
             --width=450;
         then
             echo "Usuário escolheu processar novamente. Apagando diretório existente..."
-            if $use_sudo_for_output_dir; then sudo rm -rf "$OUTPUT_DIR"; else rm -rf "$OUTPUT_DIR"; fi
+            # --- MODIFICAÇÃO: Sempre usar sudo rm ---
+            sudo rm -rf "$OUTPUT_DIR"
+            # --- FIM DA MODIFICAÇÃO ---
             if [ $? -ne 0 ]; then
                 zenity --error --text="Falha ao apagar o diretório '$OUTPUT_DIR'.\nVerifique as permissões."
                 exit 6
             fi
-            if $use_sudo_for_output_dir; then sudo mkdir -p "$OUTPUT_DIR" && sudo chown $KALI_UID:$KALI_GID "$OUTPUT_DIR"; else mkdir -p "$OUTPUT_DIR"; fi
+            # Usa sudo para criar e ajustar dono, mais seguro
+            sudo mkdir -p "$OUTPUT_DIR"
+            sudo chown $KALI_UID:$KALI_GID "$OUTPUT_DIR"
             CONTINUE_PROCESSING=false
         else
             echo "Usuário escolheu continuar o processamento anterior."
@@ -296,8 +288,9 @@ setup_output_dir() {
             fi
         fi
     else
-        # Diretório não existe, cria
-        if $use_sudo_for_output_dir; then sudo mkdir -p "$OUTPUT_DIR" && sudo chown $KALI_UID:$KALI_GID "$OUTPUT_DIR"; else mkdir -p "$OUTPUT_DIR"; fi
+        # Diretório não existe, cria (com sudo e ajusta dono)
+        sudo mkdir -p "$OUTPUT_DIR"
+        sudo chown $KALI_UID:$KALI_GID "$OUTPUT_DIR"
         CONTINUE_PROCESSING=false
     fi
 
