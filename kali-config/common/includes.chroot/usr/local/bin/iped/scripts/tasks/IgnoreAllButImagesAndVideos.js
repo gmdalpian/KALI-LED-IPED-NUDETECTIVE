@@ -115,6 +115,10 @@ function process(e) {
            
      fileExt = fileExt.toLowerCase();
      
+     // Verifica thumbs de video
+     if(fileExt.indexOf("_thumb_")!=-1)
+     	return;
+     
      // Ignora tudo com excecao de imagens e videos
      if(Imagens.indexOf(fileExt)==-1 && Videos.indexOf(fileExt)==-1)
          e.setToIgnore(true);
