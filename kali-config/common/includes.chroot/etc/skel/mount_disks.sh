@@ -61,7 +61,7 @@ while read line ; do
 			then
 				# verifica primeiro se o disco ja nao foi montado
 				if ! findmnt --mountpoint /media/decrypted_$disk &> /dev/null; then
-					sudo mount -o loop,ro /dislocker/bitlocker_$disk/dislocker-file /media/decrypted_$disk -t ntfs
+					sudo mount -o loop,ro /dislocker/bitlocker_$disk/dislocker-file /media/decrypted_$disk -t ntfs3
 				fi
 			else
 				while true; do
@@ -87,7 +87,7 @@ while read line ; do
 						if sudo test -f /dislocker/bitlocker_$disk/dislocker-file;
 						then
 							# disco decriptografado com a chave de recuperacao, montando
-							sudo mount -o loop,ro /dislocker/bitlocker_$disk/dislocker-file /media/decrypted_$disk -t ntfs
+							sudo mount -o loop,ro /dislocker/bitlocker_$disk/dislocker-file /media/decrypted_$disk -t ntfs3
 							break
 						else
 							# tenta primeiramente montar usando a chave fornecida como senha de acesso
@@ -95,7 +95,7 @@ while read line ; do
 							if sudo test -f /dislocker/bitlocker_$disk/dislocker-file;
 							then
 								# disco decriptografado com a senha de acesso, montando
-								sudo mount -o loop,ro /dislocker/bitlocker_$disk/dislocker-file /media/decrypted_$disk -t ntfs
+								sudo mount -o loop,ro /dislocker/bitlocker_$disk/dislocker-file /media/decrypted_$disk -t ntfs3
 								break
 							else
 								zenity --error --title="Erro de Chave BitLocker!" --text="A chave fornecida nao decifrou a unidade." --width=300 --timeout=20
