@@ -452,9 +452,6 @@ class App(QMainWindow):
 
     def show_system_info(self):
         """Coleta e exibe as informações do sistema em um diálogo."""
-        # Executa o script de montagem ANTES de coletar as infos, se necessário
-        if not self._run_mount_script_if_needed():
-             return
 
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
