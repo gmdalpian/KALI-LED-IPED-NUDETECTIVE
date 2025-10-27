@@ -470,7 +470,7 @@ fi
 echo "Iniciando IPED... Isso pode levar muito tempo."
 
 # 5. Execução (FINAL_CMD já contém sudo)
-$FINAL_CMD
+eval $FINAL_CMD
 
 if [ $? -ne 0 ]; then
     echo "ERRO: O processamento do IPED falhou."
