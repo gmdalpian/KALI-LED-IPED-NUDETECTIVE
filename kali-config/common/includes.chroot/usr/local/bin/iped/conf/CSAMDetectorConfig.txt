@@ -1,0 +1,27 @@
+# [Experimental] Detects Child Sexual Abuse Material (CSAM) using a TensorFlow or PyTorch based AI model.
+# Must have either tensorflow or pytorch with timm installed, see documentation
+# To enable module edit enableCSAMDetector property in IPEDConfig.txt file
+
+# Availabel models:
+#    - tensorflow_b0_v1.keras    - EfficientNetV2-B0 using tensorflow, usable in CPU only
+#    - tensorflow_large_v1.keras - EfficientNetV2-L based on ImageNet-1K using tensorflow (use only if GPU is available)
+#    - pytorch_b0_v1.pth         - EfficientNetV2-B0 using PyTorch, usable in CPU only
+#    - pytorch_large_v1.pth      - EfficientNetV2-L based on ImageNet-21K using tensorflow (use only if GPU is available)
+#
+CSAMModelFile = model_B0_fp32_v3.tflite
+
+# Batch size to be used. When using the large models this value should  be reduced to avoid GPU memory exaustion
+# For example, recommended size for 12 GB GPU on large models is 16
+CSAMBatchSize = 64
+
+# Minimum image size to be processed, in bytes (use 0 to disable)
+CSAMMinimumImageSize = 2048
+
+# Minimum file dimension, in pixels (use 0 to disable)
+CSAMSkipDimension = 10
+
+# Skip files with hits on IPED HashDB database
+CSAMSkipHashDBFiles = true
+
+# Creates Bookmarks with files of interest in the end of processing
+CSAMCreateBookmarks = true
