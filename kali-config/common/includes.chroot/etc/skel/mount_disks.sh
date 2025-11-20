@@ -10,8 +10,8 @@
 # - Monta partições, discos sem partição (superfloppy), LDM e BitLocker.
 # - Garante que todas as montagens sejam SOMENTE LEITURA.
 # - Impede a execução, acesso a dispositivos e SUID (noexec, nodev, nosuid).
-# - Impede a reprodução do journal (noload para ext4, ro para ntfs3).
-# - Usa o driver 'ntfs3' para todas as partições NTFS.
+# - Impede a reprodução do journal (noload para ext4, ro para ntfs).
+# - Usa o driver 'ntfs' para todas as partições NTFS.
 # - Verifica se um dispositivo já está montado.
 # - Ignora o disco do sistema Live (USB, CD/DVD, etc.).
 # - Gera um relatório final com o Zenity (pode ser desabilitado)
@@ -117,11 +117,11 @@ mount_forensic() {
     
     # Opções de base, cruciais para segurança e forense
     local mount_options="ro,noexec,nodev,nosuid"
-    local type_options="" # Opções de tipo de FS, ex: -t ntfs3
+    local type_options="" # Opções de tipo de FS, ex: -t ntfs
 
     # 5. Adicionar opções específicas de journal e tipo
     if [[ "$fs_type" == "ntfs" ]]; then
-        type_options="-t ntfs3"
+        type_options="-t ntfs"
         
     elif [[ "$fs_type" == "ext3" || "$fs_type" == "ext4" ]]; then
         mount_options="$mount_options,noload"
@@ -202,9 +202,9 @@ while read -r bde_device_path; do
         if sudo test -f "$dislocker_file"; then
             # Sucesso (suspenso)
             echo "BitLocker em $bde_device_path está suspenso. Montando..."
-            if sudo mount -o $bde_mount_options "$dislocker_file" "$decrypted_mount_point" -t ntfs3; then
+            if sudo mount -o $bde_mount_options "$dislocker_file" "$decrypted_mount_point" -t ntfs; then
                 echo "Sucesso: BitLocker de $bde_device_path montado em $decrypted_mount_point"
-                echo "SUCESSO: $bde_device_path (BitLocker) -> $decrypted_mount_point (Tipo: ntfs3, Opções: $bde_mount_options)" >> "$MOUNT_LOG"
+                echo "SUCESSO: $bde_device_path (BitLocker) -> $decrypted_mount_point (Tipo: ntfs, Opções: $bde_mount_options)" >> "$MOUNT_LOG"
             else
                 echo "Erro: Falha ao montar o arquivo dislocker-file de $bde_device_path."
                 echo "ERRO: Falha ao montar o arquivo dislocker-file de $bde_device_path (suspenso)." >> "$MOUNT_LOG"
@@ -232,9 +232,9 @@ while read -r bde_device_path; do
                     sudo dislocker -V "$bde_device_path" -p"$bitlocker_pass" -- "$dislocker_path" -r
                     if sudo test -f "$dislocker_file"; then
                         echo "Chave de recuperação aceita. Montando..."
-                        if sudo mount -o $bde_mount_options "$dislocker_file" "$decrypted_mount_point" -t ntfs3; then
+                        if sudo mount -o $bde_mount_options "$dislocker_file" "$decrypted_mount_point" -t ntfs; then
                             echo "Sucesso: BitLocker de $bde_device_path montado em $decrypted_mount_point"
-                            echo "SUCESSO: $bde_device_path (BitLocker) -> $decrypted_mount_point (Tipo: ntfs3, Opções: $bde_mount_options)" >> "$MOUNT_LOG"
+                            echo "SUCESSO: $bde_device_path (BitLocker) -> $decrypted_mount_point (Tipo: ntfs, Opções: $bde_mount_options)" >> "$MOUNT_LOG"
                         else
                             echo "Erro: Falha ao montar o arquivo dislocker-file de $bde_device_path."
                             echo "ERRO: Falha ao montar o arquivo dislocker-file de $bde_device_path (com Chave)." >> "$MOUNT_LOG"
@@ -245,9 +245,9 @@ while read -r bde_device_path; do
                         sudo dislocker -V "$bde_device_path" --user-password="$bitlocker_pass" -- "$dislocker_path" -r
                         if sudo test -f "$dislocker_file"; then
                             echo "Senha de usuário aceita. Montando..."
-                            if sudo mount -o $bde_mount_options "$dislocker_file" "$decrypted_mount_point" -t ntfs3; then
+                            if sudo mount -o $bde_mount_options "$dislocker_file" "$decrypted_mount_point" -t ntfs; then
                                 echo "Sucesso: BitLocker de $bde_device_path montado em $decrypted_mount_point"
-                                echo "SUCESSO: $bde_device_path (BitLocker) -> $decrypted_mount_point (Tipo: ntfs3, Opções: $bde_mount_options)" >> "$MOUNT_LOG"
+                                echo "SUCESSO: $bde_device_path (BitLocker) -> $decrypted_mount_point (Tipo: ntfs, Opções: $bde_mount_options)" >> "$MOUNT_LOG"
                             else
                                 echo "Erro: Falha ao montar o arquivo dislocker-file de $bde_device_path."
                                 echo "ERRO: Falha ao montar o arquivo dislocker-file de $bde_device_path (com Senha)." >> "$MOUNT_LOG"
