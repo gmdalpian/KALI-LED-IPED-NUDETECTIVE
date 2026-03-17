@@ -50,7 +50,7 @@ do_copy() {
 
     # 3. Processamento das bibliotecas Python (scripts de IA/Forense)
     mkdir -p ${BASE_DIR}/kali-config/common/includes.chroot/usr/local/lib
-    for f in ${EXTERNAL_DISK}/python/*.tar.gz; do
+    for f in ${EXTERNAL_DISK}/python/*; do
         [ -e "$f" ] && tar -vzxf "$f" -C ${BASE_DIR}/kali-config/common/includes.chroot/usr/local/lib
     done
 
@@ -68,8 +68,8 @@ do_build() {
     time ./build.sh \
       --verbose \
       --distribution kali-last-snapshot \
-      --version $RELEASE \
-      --bootstrap-packages "ca-certificates gnupg"
+      --version $RELEASE
+#      --bootstrap-packages "ca-certificates gnupg"
 
     # Validação automática se a opção NVIDIA foi solicitada
     if [[ "$ACTION" == "nvidia" || "$OPTION" == "nvidia" || "$ACTION" == "all" ]]; then
