@@ -6,13 +6,16 @@
 # (Versão com sudo rm -rf incondicional ao apagar caso existente)
 #
 
+source /home/kali/forensic_utils.sh
+
 # --- Constantes ---
 IPED_DIR="/usr/local/bin/iped"
-JAVA_CMD_BASE="sudo java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar"
+JAVA_CMD_BASE="java --module-path /usr/share/openjfx/lib/ --add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base -jar iped.jar"
 OUTPUT_DIR_DESKTOP="/home/kali/Desktop/IPED-CASO"
 OUTPUT_DIR_TRIAGE_BASE="/home/kali/Desktop/triage"
 OUTPUT_DIR_TRIAGE_CASE="$OUTPUT_DIR_TRIAGE_BASE/IPED-CASO"
 COMMAND_LOG_FILE="/home/kali/Desktop/iped_comando_executado.log"
+MEDIA_DIR="/run/media"
 
 # --- Variáveis Globais ---
 CONTINUE_PROCESSING=false
@@ -79,32 +82,19 @@ handle_bitlocker() {
 }
 
 # Lógica para encontrar e montar partição de triagem
-# --- FUNÇÃO MODIFICADA (Lógica de rm e mkdir) ---
 setup_output_dir() {
     echo "Configurando diretório de saída..."
-    TRIAGE_PARTITION_FOUND=false
-    local triage_part_device=""
-
-    local root_system=$(cat /proc/mounts | grep /run/live/medium | awk '{print $1}')
-    local root_system_triage=${root_system:5:${#root_system}-6}
-    [ -z "$root_system_triage" ] && root_system_triage='null'
-
-    while read line ; do
-        local part=$(echo "$line" | awk '{print $1}')
-        if echo "$part" | grep -q "$root_system_triage"; then
-           if sudo blkid /dev/$part | grep -q 'IPED-TRIAGE'; then
-	           triage_part_device="/dev/$part"
-               TRIAGE_PARTITION_FOUND=true
-	           break
-	       fi
-        fi
-    done <<< "$(lsblk -l | grep part)"
+    
+    local triage_part_device=$(get_triage_device)
+    local TRIAGE_PARTITION_FOUND=false
+    [ -n "$triage_part_device" ] && TRIAGE_PARTITION_FOUND=true
 
     if $TRIAGE_PARTITION_FOUND; then
-        echo "Partição IPED-TRIAGE encontrada em $triage_part_device"
+        echo "Dispositivo de destino identificado: $triage_part_device"
         OUTPUT_DIR=$OUTPUT_DIR_TRIAGE_CASE
         DESKTOP_FILE="IPED-Caso-triage.desktop"
-
+        
+        # O restante da lógica de montagem (mkdir, mount, swap) continua igual...
         # Garante que o diretório base exista (sem sudo)
         if [ ! -d "$OUTPUT_DIR_TRIAGE_BASE" ]; then
              echo "Criando diretório base de triagem: $OUTPUT_DIR_TRIAGE_BASE"
@@ -359,7 +349,7 @@ build_target_string() {
             if [ -f "/home/kali/mount_disks.sh" ]; then
                 /home/kali/mount_disks.sh
             fi
-            TARGET_STRING="-d /media/"
+            TARGET_STRING="-d $MEDIA_DIR"
             ;;
 
         "manual_dir")
@@ -442,6 +432,17 @@ if ! $CONTINUE_PROCESSING; then
      build_target_string # Define $TARGET_STRING
 fi
 
+# seta a variavel python
+GPU=$(lspci | grep -Ei "vga|3d")
+
+PYTHON_TARGET=""
+
+if echo "$GPU" | grep -qi nvidia; then
+    [ -f "/opt/venv-cuda/bin/activate" ] && PYTHON_TARGET="/opt/venv-cuda/bin/activate"
+elif echo "$GPU" | grep -qi amd; then
+    [ -f "/opt/venv-rocm/bin/activate" ] && PYTHON_TARGET="/opt/venv-rocm/bin/activate"
+fi
+    
 
 # 4. Construção e Log do Comando
 if $CONTINUE_PROCESSING; then
@@ -453,7 +454,11 @@ if $CONTINUE_PROCESSING; then
     echo "========================================================"
 else
     # JAVA_CMD_BASE já contém 'sudo java...'
-    FINAL_CMD="$JAVA_CMD_BASE -o $OUTPUT_DIR -profile $PROFILE $LOG_FILE_OPT $KEYWORD_FILE_OPT $TARGET_STRING"
+    if [ -n "$PYTHON_TARGET" ]; then
+        FINAL_CMD="sudo bash -c \"source $PYTHON_TARGET && $JAVA_CMD_BASE -o $OUTPUT_DIR -profile $PROFILE $LOG_FILE_OPT $KEYWORD_FILE_OPT $TARGET_STRING\""
+    else
+        FINAL_CMD="sudo $JAVA_CMD_BASE -o $OUTPUT_DIR -profile $PROFILE $LOG_FILE_OPT $KEYWORD_FILE_OPT $TARGET_STRING"
+    fi
     echo "========================================================"
     echo "COMANDO FINAL A SER EXECUTADO:"
     echo "$FINAL_CMD"

@@ -1,0 +1,52 @@
+#!/bin/bash
+set -e
+
+echo "[+] ===== NVIDIA DRIVER INSTALL (LIVE ISO SAFE MODE) ====="
+
+cd /root/nvidia
+
+# Garantir permissões
+chmod +x NVIDIA-Linux-*.run
+
+# =========================
+# INSTALAÇÃO DRIVER NVIDIA
+# =========================
+echo "[+] Instalando driver NVIDIA 580 (sem quebrar nouveau)..."
+
+./NVIDIA-Linux-x86_64-580*.run \
+    --silent \
+    --no-questions \
+    --dkms \
+    --no-nouveau-check \
+    --no-disable-nouveau \
+    --no-systemd \
+    --no-opengl-files \
+    --no-install-compat32-libs \
+    --no-rebuild-initramfs \
+    --skip-module-load
+
+echo "[+] Driver NVIDIA instalado"
+
+# =========================
+# LIMPEZA (reduzir ISO)
+# =========================
+echo "[+] Limpando arquivos desnecessários..."
+
+# Remover instalador
+rm -f /root/nvidia/NVIDIA-Linux-*.run
+
+# Limpar caches
+#apt-get clean
+#rm -rf /var/lib/apt/lists/*
+#rm -rf /tmp/*
+#rm -rf /var/tmp/*
+
+# Remover logs desnecessários
+#rm -rf /var/log/*
+
+echo "[+] Limpeza concluída"
+
+# =========================
+# FINAL
+# =========================
+echo "[+] ===== INSTALAÇÃO FINALIZADA ====="
