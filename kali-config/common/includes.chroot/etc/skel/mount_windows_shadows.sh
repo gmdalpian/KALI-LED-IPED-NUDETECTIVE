@@ -1,16 +1,12 @@
 #!/bin/bash
 
+source /home/kali/forensic_utils.sh
+
 /home/kali/mount_disks.sh
 
-root_system=`cat /proc/mounts | grep /run/live/medium | awk '{print $1}'`
+MEDIA_DIR="/run/media"
 
-#remove o /dev/ e tambem o ultimo digito
-root_system=${root_system:5:${#root_system}-6}
-
-if [ -z "$root_system" ]
-then
-    root_system='null'
-fi
+root_system=$(get_boot_disk_name)
 
 # busca e tenta montar as Volume Shadow Copy (VSS) do Windows
 echo "Tenta montar as Volume Shadow Copy (VSS) do Windows, caso existam"
@@ -29,10 +25,10 @@ while read line ; do
 			sudo mkdir /vss
 			sudo mkdir /vss/vss_$disk
 			sudo vshadowmount /dev/$disk /vss/vss_$disk
-			sudo mkdir /media/vss_$disk
+			sudo mkdir $MEDIA_DIR/vss_$disk
 			for vss in $(sudo ls /vss/vss_$disk); do
-				sudo mkdir /media/vss_$disk/$vss
-				sudo mount -o ro /vss/vss_$disk/$vss /media/vss_$disk/$vss
+				sudo mkdir $MEDIA_DIR/vss_$disk/$vss
+				sudo mount -o ro /vss/vss_$disk/$vss $MEDIA_DIR/vss_$disk/$vss
 			done			
 		fi
     fi
@@ -48,10 +44,10 @@ for dislockerpart in $(sudo ls /dislocker); do
 		sudo mkdir /vss
 		sudo mkdir /vss/vss_$dislockerpart
 		sudo vshadowmount /dislocker/$dislockerpart/dislocker-file /vss/vss_$dislockerpart
-		sudo mkdir /media/vss_$dislockerpart
+		sudo mkdir $MEDIA_DIR/vss_$dislockerpart
 		for vss in $(sudo ls /vss/vss_$dislockerpart); do
-			sudo mkdir /media/vss_$dislockerpart/$vss
-			sudo mount -o ro /vss/vss_$dislockerpart/$vss /media/vss_$dislockerpart/$vss
+			sudo mkdir $MEDIA_DIR/vss_$dislockerpart/$vss
+			sudo mount -o ro /vss/vss_$dislockerpart/$vss $MEDIA_DIR/vss_$dislockerpart/$vss
 		done			
 	fi
 done	

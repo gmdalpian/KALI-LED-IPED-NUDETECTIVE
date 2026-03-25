@@ -1,0 +1,90 @@
+#!/bin/bash
+set -e
+
+echo "[+] ===== NVIDIA BUILD (MULTI-VERSION) ====="
+
+cd /root/nvidia
+chmod +x *.run
+
+KERNEL=$(uname -r)
+
+echo "[+] Kernel detectado: $KERNEL"
+
+# =========================
+# PREPARAÇÃO
+# =========================
+mkdir -p /opt/nvidia/open
+mkdir -p /opt/nvidia/legacy
+
+rm -rf /lib/modules/$KERNEL/kernel/drivers/video/nvidia* || true
+
+COMMON_FLAGS="\
+    --silent \
+    --no-questions \
+    --no-dkms \
+    --no-nouveau-check \
+    --no-disable-nouveau \
+    --no-systemd \
+    --no-opengl-files \
+    --no-install-compat32-libs \
+    --no-rebuild-initramfs \
+    --skip-module-load"
+
+# =========================
+# 2. DRIVER LEGACY (580)
+# =========================
+echo "[+] Compilando driver LEGACY (580)..."
+
+./NVIDIA-Linux-x86_64-580*.run \
+    $COMMON_FLAGS \
+    --kernel-module-type=proprietary
+
+cp -r /lib/modules/$KERNEL/kernel/drivers/video/nvidia* /opt/nvidia/legacy/
+
+rm -rf /lib/modules/$KERNEL/kernel/drivers/video/nvidia*
+
+# =========================
+# 1. DRIVER OPEN (595)
+# =========================
+echo "[+] Compilando driver OPEN (595)..."
+
+./NVIDIA-Linux-x86_64-595*.run \
+    $COMMON_FLAGS \
+    --kernel-module-type=open
+
+cp -r /lib/modules/$KERNEL/kernel/drivers/video/nvidia* /opt/nvidia/open/
+
+rm -rf /lib/modules/$KERNEL/kernel/drivers/video/nvidia*
+
+# =========================
+# 3. GERAR DEPENDÊNCIAS (UMA VEZ)
+# =========================
+echo "[+] Gerando modules.dep..."
+
+cp -r /opt/nvidia/open/nvidia* /lib/modules/$KERNEL/kernel/drivers/video/
+
+depmod -a
+
+rm -rf /lib/modules/$KERNEL/kernel/drivers/video/nvidia*
+
+# =========================
+# 4. LIMPEZA
+# =========================
+rm -f /root/nvidia/NVIDIA-*.run
+
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+rm -rf /tmp/*
+rm -rf /var/tmp/*
+rm -rf /var/log/nvidia*
+
+echo "[+] Drivers preparados:"
+echo "    → OPEN (590)"
+echo "    → LEGACY (580)"
+
+# habilitando servico nvidia-select
+echo "Habilitando servico nvidia-select.service"
+systemctl daemon-reload
+systemctl enable nvidia-select.service
+
+echo "[+] ===== FINALIZADO ====="

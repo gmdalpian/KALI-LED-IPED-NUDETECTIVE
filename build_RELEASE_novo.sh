@@ -8,17 +8,10 @@ ACTION=$2
 OPTION=$3
 NVIDIA_SOURCE="$EXTERNAL_DISK/nvidia"
 
-# --- Função de Verificação de Integridade (NVIDIA) ---
-test_integrity() {
-    echo '--- [AÇÃO: CHECK] Validando Módulo NVIDIA no chroot ---'
-    # Verifica se o DKMS instalou o módulo (Série 580 p/ RTX 5070 e P620)
-    DKMS_STATUS=$(sudo chroot ${BASE_DIR}/kali-live/chroot dkms status)
-    
-    if [[ $DKMS_STATUS == *"nvidia"* && $DKMS_STATUS == *"installed"* ]]; then
-        echo "SUCESSO: Driver NVIDIA compilado com sucesso."
-    else
-        echo "ERRO CRÍTICO: Falha na compilação do driver NVIDIA via DKMS."
-        echo "Status: $DKMS_STATUS"
+# --- Função de Verificação de Erro ---
+check_status() {
+    if [ $? -ne 0 ]; then
+        echo "ERRO CRÍTICO: $1 falhou. Abortando."
         exit 1
     fi
 }
@@ -29,18 +22,22 @@ do_copy() {
     
     # 1. Limpeza e Clonagem do Repositório do Kali
     sudo rm -rf ${BASE_DIR}/kali-live
-    git clone https://gitlab.com/kalilinux/build-scripts/kali-live.git ${BASE_DIR}/kali-live
+    sudo rm -rf ${BASE_DIR}/kali-config
     
-    # 2. Extração das configurações principais (do seu zip)
-    unzip -o ${EXTERNAL_DISK}/kali-config.zip -d ${BASE_DIR}/
+    git clone https://gitlab.com/kalilinux/build-scripts/kali-live.git ${BASE_DIR}/kali-live
+    check_status "Clonagem do repositório kali-live"
+    
+    # 2. Extração das configurações principais
+    7z x ${EXTERNAL_DISK}/kali-config.zip -o${BASE_DIR}/
+    check_status "Extração do arquivo kali-config.zip"
 
     # --- BLOCO NVIDIA: Integração da estrutura de pastas ---
     if [[ "$ACTION" == "nvidia" || "$OPTION" == "nvidia" || "$ACTION" == "all" && "$OPTION" == "nvidia" ]]; then
         echo "--- [AÇÃO: NVIDIA] Mesclando estrutura de pastas de $NVIDIA_SOURCE ---"
         
         if [ -d "$NVIDIA_SOURCE/kali-config" ]; then
-            # Copia recursivamente preservando a estrutura (apt/, archives/, etc)
             cp -Rf "$NVIDIA_SOURCE/kali-config/"* "${BASE_DIR}/kali-config/"
+            check_status "Cópia da estrutura NVIDIA"
             echo "Estrutura NVIDIA integrada com sucesso."
         else
             echo "ERRO: Estrutura $NVIDIA_SOURCE/kali-config não encontrada!"
@@ -50,31 +47,47 @@ do_copy() {
 
     # 3. Processamento das bibliotecas Python (scripts de IA/Forense)
     mkdir -p ${BASE_DIR}/kali-config/common/includes.chroot/usr/local/lib
-    for f in ${EXTERNAL_DISK}/python/*; do
-        [ -e "$f" ] && tar -vzxf "$f" -C ${BASE_DIR}/kali-config/common/includes.chroot/usr/local/lib
-    done
+    
+    for f in ${EXTERNAL_DISK}/python/PYTHON*; do
+        if [ -e "$f" ]; then
+            tar -vzxf "$f" -C ${BASE_DIR}/kali-config/common/includes.chroot/usr/local/lib
+            check_status "Extração da biblioteca Python: $f"
+        fi
+    done	
+
+    if [[ "$ACTION" == "nvidia" || "$OPTION" == "nvidia" || "$ACTION" == "all" && "$OPTION" == "nvidia" ]]; then
+        mkdir -p ${BASE_DIR}/kali-config/common/includes.chroot/opt
+        for f in ${EXTERNAL_DISK}/python/NVIDIA*; do
+            if [ -e "$f" ]; then
+                tar -vzxf "$f" -C ${BASE_DIR}/kali-config/common/includes.chroot/opt
+                check_status "Extração dos pacotes NVIDIA: $f"
+            fi
+        done
+    fi    
 
     # 4. Sincronização Final para a pasta de build
     chmod -R +x ${BASE_DIR}/kali-config
     cp -Rf ${BASE_DIR}/kali-config/* ${BASE_DIR}/kali-live/kali-config/
+    check_status "Sincronização final para a pasta de build"
+
+    # --- LIMPEZA DE ESPAÇO ---
+    echo "Limpando diretório temporário para liberar espaço..."
+    sudo rm -rf ${BASE_DIR}/kali-config/
+    echo "Diretório ${BASE_DIR}/kali-config/ removido."
 }
 
 # --- Função de Compilação da ISO ---
 do_build() {
     echo '--- [AÇÃO: BUILD] Iniciando compilação da ISO ---'
-    cd ${BASE_DIR}/kali-live
+    cd ${BASE_DIR}/kali-live || exit 1
 
     # bootstrap-packages essencial para o APT lidar com HTTPS no início do build
     time ./build.sh \
       --verbose \
       --distribution kali-last-snapshot \
       --version $RELEASE
-#      --bootstrap-packages "ca-certificates gnupg"
-
-    # Validação automática se a opção NVIDIA foi solicitada
-    if [[ "$ACTION" == "nvidia" || "$OPTION" == "nvidia" || "$ACTION" == "all" ]]; then
-        test_integrity
-    fi
+    
+    check_status "Compilação da ISO (build.sh)"
 
     # Gestão do arquivo final
     ISO_NAME="kali-linux-$RELEASE-live-amd64.iso"
@@ -83,10 +96,18 @@ do_build() {
     if [ -f "$ISO_PATH" ]; then
         md5sum "$ISO_PATH" > "${ISO_PATH}.md5"
         rm -rf ${EXTERNAL_DISK}/images/*
-        FINAL_NAME="KALI-IA-FORENSIC-$(date -I)"
+        FINAL_NAME="KALI-LED-IPED-NUDETECTIVE-$(date -I)"
+        if [[ "$ACTION" == "nvidia" || "$OPTION" == "nvidia" || "$ACTION" == "all" ]]; then
+            FINAL_NAME+="_NVIDIA"
+        fi
         cp "$ISO_PATH" "${EXTERNAL_DISK}/images/${FINAL_NAME}.iso"
+        check_status "Cópia da ISO final para o disco externo"
+        
         cp "${ISO_PATH}.md5" "${EXTERNAL_DISK}/images/${FINAL_NAME}.iso.md5"
         echo "ISO gerada e copiada para o disco externo: ${FINAL_NAME}.iso"
+    else
+        echo "ERRO: O arquivo ISO não foi encontrado em $ISO_PATH"
+        exit 1
     fi
 }
 

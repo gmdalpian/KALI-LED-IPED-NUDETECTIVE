@@ -1,10 +1,9 @@
 #!/bin/bash
 # seta os discos como somente leitura pelo comando blockdev
 
-root_system=`cat /proc/mounts | grep /run/live/medium | awk '{print $1}'`
+source /home/kali/forensic_utils.sh
 
-#remove o /dev/ e tambem o ultimo digito
-root_system=${root_system:5:${#root_system}-6}
+root_system=$(get_boot_disk_name)
 
 if [ -z "$root_system" ]
 then

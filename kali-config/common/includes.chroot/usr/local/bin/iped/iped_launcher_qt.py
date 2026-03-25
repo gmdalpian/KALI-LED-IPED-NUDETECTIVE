@@ -523,33 +523,14 @@ class App(QMainWindow):
         info.append("\nDiscos e Partições (Ignorando disco de boot):")
         info.append("="*40)
 
-        boot_disk_to_ignore = ""
-        try:
-            boot_device_full = run_cmd(['findmnt', '-n', '-o', 'SOURCE', '--target', '/run/live/medium'])
-
-            if boot_device_full and not boot_device_full.startswith("ERRO"):
-                boot_device_base = os.path.basename(boot_device_full)
-
-                boot_disk_parent = run_cmd(['lsblk', '-n', '-o', 'PKNAME', f'/dev/{boot_device_base}'])
-
-                if boot_disk_parent and not boot_disk_parent.startswith("ERRO"):
-                    boot_disk_to_ignore = boot_disk_parent
-                    info.append(f"(Ignorando disco de boot: {boot_disk_to_ignore})")
-                else:
-                    match = re.match(r'([a-zA-Z]+)', boot_device_base)
-                    if match:
-                         boot_disk_to_ignore = match.group(1)
-                         info.append(f"(Ignorando dispositivo de boot: {boot_disk_to_ignore})")
-                    else:
-                        boot_disk_to_ignore = boot_device_base # Fallback
-                        info.append(f"(Ignorando dispositivo de boot: {boot_disk_to_ignore})")
-            else:
-                 info.append(f"(Aviso: {boot_device_full}, mostrando tudo.)")
-                 boot_disk_to_ignore = ""
-        except Exception as e:
-            info.append(f"(Erro ao identificar disco de boot: {e})")
+        # Chama o utilitário centralizado
+        boot_disk_to_ignore = run_cmd(['/home/kali/forensic_utils.sh', '--boot-disk'])
+        
+        if boot_disk_to_ignore and not boot_disk_to_ignore.startswith("ERRO"):
+            info.append(f"(Ignorando disco de boot: {boot_disk_to_ignore})")
+        else:
             boot_disk_to_ignore = ""
-
+            
         disk_output_raw = run_cmd(['lsblk', '-l', '-o', 'NAME,SIZE,FSTYPE,LABEL,TYPE,MOUNTPOINT'])
 
         if not disk_output_raw.startswith("ERRO") and not disk_output_raw.startswith("TIMEOUT"):

@@ -1,0 +1,17 @@
+[Unit]
+Description=NVIDIA Driver Auto Selector
+# Garante que rode após o carregamento básico de hardware, 
+# mas ANTES do gerenciador de login/display manager
+DefaultDependencies=no
+After=systemd-modules-load.service
+Before=display-manager.service multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/nvidia-select.sh
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target

@@ -22,6 +22,10 @@
 #   sudo ./mount_disks.sh --no-report (para desabilitar o relatório Zenity)
 # -----------------------------------------------------------------------------
 
+source /home/kali/forensic_utils.sh
+
+MEDIA_DIR="/run/media"
+
 # --- Configuração Inicial ---
 
 SHOW_REPORT=true
@@ -46,26 +50,12 @@ sudo mkdir -p /dislocker
 # --- Detecção Robusta do Sistema Live ---
 
 echo "Identificando o disco do sistema Live para excluí-lo..."
-ROOT_DEV=$(findmnt -n -o SOURCE /run/live/medium)
-ROOT_DISK_NAME=""
+ROOT_DISK_NAME=$(get_boot_disk_name)
 
-if [[ -n "$ROOT_DEV" ]]; then
-    # Tenta pegar o nome do "disco pai" (ex: sda de /dev/sda1)
-    ROOT_DISK_NAME=$(lsblk -no pkname "$ROOT_DEV")
-    
-    # FALLBACK para mídias óticas (ex: /dev/sr0)
-    if [[ -z "$ROOT_DISK_NAME" ]]; then
-        ROOT_DISK_NAME=$(basename "$ROOT_DEV")
-    fi
-
-    if [[ -n "$ROOT_DISK_NAME" ]]; then
-        echo "Disco do sistema Live ($ROOT_DEV) identificado: $ROOT_DISK_NAME. Este disco será ignorado."
-    else
-        echo "Aviso: Falha crítica ao determinar o disco do sistema Live de $ROOT_DEV."
-        ROOT_DISK_NAME="null_failsafe"
-    fi
+if [[ -n "$ROOT_DISK_NAME" ]]; then
+    echo "Disco do sistema Live identificado: $ROOT_DISK_NAME. Este disco será ignorado."
 else
-    echo "Aviso: Não foi possível encontrar a montagem /run/live/medium. Tentando continuar..."
+    echo "Aviso: Falha ao determinar disco de boot."
     ROOT_DISK_NAME="null_failsafe"
 fi
 
@@ -150,7 +140,7 @@ echo "Montando partições padrão (somente leitura)..."
 while read -r line; do
     disk_name=$(echo "$line" | awk '{print $1}') # e.g., sda, sda1, sdb, sr0
     if [[ -n "$disk_name" ]]; then
-        mount_forensic "/dev/$disk_name" "/media/$disk_name"
+        mount_forensic "/dev/$disk_name" "$MEDIA_DIR/$disk_name"
     fi
 done <<< "$(lsblk -lno NAME,TYPE | grep -E 'part|disk|rom')"
 
@@ -164,7 +154,7 @@ sleep 2
 while read -r line; do
     ldm_name=$(echo "$line" | awk '{print $1}') # e.g., ldm_vol_...
     if [[ -n "$ldm_name" ]]; then
-        mount_forensic "/dev/mapper/$ldm_name" "/media/$ldm_name"
+        mount_forensic "/dev/mapper/$ldm_name" "$MEDIA_DIR/$ldm_name"
     fi
 done <<< "$(lsblk -lno NAME,TYPE | grep 'dm')"
 
@@ -178,7 +168,7 @@ while read -r bde_device_path; do
         
         # CORREÇÃO: Removido 'local' das declarações de variáveis
         disk_name=$(basename "$bde_device_path") 
-        decrypted_mount_point="/media/decrypted_$disk_name"
+        decrypted_mount_point="$MEDIA_DIR/decrypted_$disk_name"
         dislocker_path="/dislocker/bitlocker_$disk_name"
         dislocker_file="$dislocker_path/dislocker-file"
         bde_mount_options="loop,ro,noexec,nodev,nosuid"

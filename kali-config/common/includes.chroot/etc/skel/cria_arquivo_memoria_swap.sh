@@ -1,25 +1,8 @@
 #!/bin/bash
 
-root_system=`cat /proc/mounts | grep /run/live/medium | awk '{print $1}'`
+source /home/kali/forensic_utils.sh
 
-# verifica se ha outras particoes no disco usado como boot e se alguma delas denomina-se 'IPED-TRIAGE', e salva na variavel $triage
-root_system_triage=${root_system:5:${#root_system}-6}
-
-if [ -z "$root_system_triage" ]
-then
-    root_system_triage='null'
-fi
-
-while read line ; do
-        part=`echo "$line" | awk '{print $1}'`
-        if echo "$part" | grep -q "$root_system_triage"
-        then      
-           if sudo blkid /dev/$part | grep 'IPED-TRIAGE.*exfat'
-	   then
-	       triage=$part
-	   fi
-        fi
-done <<< "$(lsblk -l | grep part)"
+triage=$(get_triage_device)
 
 # Executa o IPED
 if [ -z "$triage" ]
