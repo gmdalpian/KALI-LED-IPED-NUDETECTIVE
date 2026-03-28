@@ -1,22 +1,39 @@
 #!/bin/bash
 # forensic_utils.sh - Biblioteca central para detecção de dispositivos de boot e triage
 
-# Retorna o caminho físico da partição de boot (ex: /dev/sda1)
+# Retorna o caminho físico da partição de boot (ex: /dev/sdb1)
 get_boot_phys_part() {
     local boot_dev=$(findmnt -n -o SOURCE /run/live/medium)
+    
+    # Verifica se o boot é via Device Mapper (Ventoy)
     if [[ "$boot_dev" == *"/mapper/ventoy"* ]]; then
         local map_id=$(sudo dmsetup table ventoy 2>/dev/null | awk '{print $4}')
-        readlink -f "/sys/dev/block/$map_id"
+        if [[ -n "$map_id" ]]; then
+            # O readlink resolve para algo como /sys/devices/.../block/sdb/sdb1
+            # O basename extrai apenas 'sdb1'
+            local dev_name=$(basename "$(readlink -f "/sys/dev/block/$map_id")")
+            echo "/dev/$dev_name"
+        else
+            echo "$boot_dev"
+        fi
     else
+        # Se não for Ventoy, o findmnt geralmente já retorna /dev/sdXn
         echo "$boot_dev"
     fi
 }
 
-# Retorna apenas o nome do disco pai do boot (ex: sda ou nvme0n1)
+# Retorna apenas o nome do disco pai do boot (ex: sdb)
 get_boot_disk_name() {
     local phys_part=$(get_boot_phys_part)
-    local disk_name=$(lsblk -no pkname "$phys_part")
-    [ -z "$disk_name" ] && basename "$phys_part" || echo "$disk_name"
+    # Tenta obter o nome do disco pai (PKNAME)
+    local disk_name=$(lsblk -no pkname "$phys_part" 2>/dev/null)
+    
+    # Se pkname for vazio (disco sem partições), usa o basename da partição
+    if [[ -z "$disk_name" ]]; then
+        basename "$phys_part"
+    else
+        echo "$disk_name"
+    fi
 }
 
 # Retorna o dispositivo correto para montagem do IPED-TRIAGE (resolve dm-X)
@@ -28,7 +45,6 @@ get_triage_device() {
     while read -r part_name ; do
         local current_phys="/dev/$part_name"
         if sudo blkid "$current_phys" | grep -q 'IPED-TRIAGE'; then
-            # Se houver mapeamentos (Ventoy), valida qual DM tem o label
             local holders_dir="/sys/class/block/$part_name/holders"
             if [ -d "$holders_dir" ] && [ "$(ls -A "$holders_dir")" ]; then
                 for holder in $(ls "$holders_dir"); do
@@ -38,16 +54,14 @@ get_triage_device() {
                     fi
                 done
             fi
-            # Se não achou via holder, usa o físico
             if ! $found; then triage_dev="$current_phys"; found=true; fi
-            # Prioriza se estiver no disco de boot
             [[ "$part_name" == *"$root_disk"* ]] && break
         fi
     done <<< "$(lsblk -lno NAME,TYPE | grep part | awk '{print $1}')"
     echo "$triage_dev"
 }
 
-# Caso o script seja chamado diretamente via terminal para testes:
+# Interface de linha de comando para testes
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     case "$1" in
         --boot-phys) get_boot_phys_part ;;

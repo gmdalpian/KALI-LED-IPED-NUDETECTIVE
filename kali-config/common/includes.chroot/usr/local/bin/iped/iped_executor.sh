@@ -16,6 +16,12 @@ OUTPUT_DIR_TRIAGE_BASE="/home/kali/Desktop/triage"
 OUTPUT_DIR_TRIAGE_CASE="$OUTPUT_DIR_TRIAGE_BASE/IPED-CASO"
 COMMAND_LOG_FILE="/home/kali/Desktop/iped_comando_executado.log"
 MEDIA_DIR="/run/media"
+GPU_DETECT_SCRIPT="/usr/local/bin/gpu-detect.sh"
+
+# --- Variáveis de Ambientes Python (Venvs) ---
+VENV_CUDA="/opt/venv-cuda/bin/activate"
+VENV_CUDA_LEGACY="/opt/venv-cuda-legacy/bin/activate"
+VENV_ROCM="/opt/venv-rocm/bin/activate"
 
 # --- Variáveis Globais ---
 CONTINUE_PROCESSING=false
@@ -432,16 +438,37 @@ if ! $CONTINUE_PROCESSING; then
      build_target_string # Define $TARGET_STRING
 fi
 
-# seta a variavel python
-GPU=$(lspci | grep -Ei "vga|3d")
-
+# =========================================================
+# DETECÇÃO DE GPU E SELEÇÃO DE AMBIENTE PYTHON
+# =========================================================
 PYTHON_TARGET=""
+if [ -f "$GPU_DETECT_SCRIPT" ]; then
+    # O eval carrega VENDOR e DRIVER diretamente do script de detecção
+    eval $($GPU_DETECT_SCRIPT) 
+    
+    CANDIDATO=""
+    if [ "$VENDOR" = "NVIDIA" ]; then
+        if [ "$DRIVER" = "open" ]; then
+            CANDIDATO="$VENV_CUDA"
+        elif [ "$DRIVER" = "legacy" ]; then
+            CANDIDATO="$VENV_CUDA_LEGACY"
+        fi
+    elif [ "$VENDOR" = "AMD" ]; then
+        CANDIDATO="$VENV_ROCM"
+    fi
 
-if echo "$GPU" | grep -qi nvidia; then
-    [ -f "/opt/venv-cuda/bin/activate" ] && PYTHON_TARGET="/opt/venv-cuda/bin/activate"
-elif echo "$GPU" | grep -qi amd; then
-    [ -f "/opt/venv-rocm/bin/activate" ] && PYTHON_TARGET="/opt/venv-rocm/bin/activate"
+    # Valida se o caminho do ambiente existe antes de setar
+    if [ -n "$CANDIDATO" ] && [ -f "$CANDIDATO" ]; then
+        PYTHON_TARGET="$CANDIDATO"
+        echo "Hardware Detectado: $VENDOR ($DRIVER)"
+        echo "Ambiente Ativo: $PYTHON_TARGET"
+    else
+        echo "Aviso: Nenhuma aceleração compatível disponível para $VENDOR."
+    fi
+else
+    echo "Aviso: Script de detecção não encontrado em $GPU_DETECT_SCRIPT"
 fi
+# =========================================================
     
 
 # 4. Construção e Log do Comando
