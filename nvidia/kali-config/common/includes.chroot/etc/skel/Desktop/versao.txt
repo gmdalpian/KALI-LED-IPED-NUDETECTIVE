@@ -1,0 +1,9 @@
+KALI-LED-IPED-NUDETECTIVE_2026-03-28-CSAM-TRIAGE-NVIDIA
+LED 1.45
+IPED 4.3
+Nudetective 4.0.1
+Kali 2026.1
+PyTorch 2.11
+Nvidia - driver 595 cuda13
+Nvidia Legacy - driver 580 cuda12.6
+AMD - ROCm 7.2
