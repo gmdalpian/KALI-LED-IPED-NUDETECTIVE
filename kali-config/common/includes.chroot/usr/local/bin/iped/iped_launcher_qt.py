@@ -8,6 +8,7 @@ import sys
 import os
 import subprocess
 import re # Importar regex para extrair o nome base do disco
+import shlex 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QLineEdit, QFileDialog, QMessageBox,
@@ -652,8 +653,9 @@ class App(QMainWindow):
         ]
         # REMOVIDO sudo daqui
         bash_cmd = f"echo 'Executando script para montar discos e verificar BitLocker...'; "
-        bash_cmd += f"{MOUNT_SCRIPT_PATH}; " # Script já tem sudo interno
-        bash_cmd += 'echo; echo "Script finalizado. Pressione Enter para fechar este terminal e continuar."; read'
+        bash_cmd += f"{MOUNT_SCRIPT_PATH}; " # Script já tem sudo interno        
+        # Adicionado timeout de 5 segundos no comando 'read' (-t 5)
+        bash_cmd += 'echo; echo "Script finalizado. Este terminal será fechado automaticamente em 5 segundos (ou pressione Enter para fechar agora)."; read -t 5'
         cmd_list.append(bash_cmd)
 
         success = False
@@ -699,7 +701,6 @@ class App(QMainWindow):
         )
         self._update_manual_path(path)
 
-    # --- FUNÇÃO MODIFICADA ---
     def start_processing(self):
         # 1. Validação
         path = self.manual_selected_path
@@ -709,8 +710,6 @@ class App(QMainWindow):
                                  "Nenhum caminho foi selecionado para o modo manual.\nPor favor, selecione um diretório ou arquivo.")
             return
 
-        # 2. Confirmação (REMOVIDA)
-
         # 3. Construção do Comando
         cmd_list = [
             'x-terminal-emulator',
@@ -719,12 +718,16 @@ class App(QMainWindow):
             '-c',
         ]
 
-        # REMOVIDO sudo daqui
         bash_cmd = f"{self.executor_script} --profile {self.selected_profile} --target {self.selected_target}"
+        
         if self.selected_target == "manual_dir":
-            bash_cmd += f" --path \"{self.manual_selected_path}\""
+            # O shlex.quote() envolve o caminho com aspas simples e escapa qualquer 
+            # caractere nocivo, garantindo que o bash o trate apenas como texto.
+            safe_path = shlex.quote(self.manual_selected_path)
+            bash_cmd += f" --path {safe_path}"
 
-        bash_cmd += '; echo; echo "Processamento concluído. Pressione Enter para fechar esta janela."; read'
+        # --- LINHA ATUALIZADA COM TIMEOUT DE 10 SEGUNDOS ---
+        bash_cmd += '; echo; echo "Processamento finalizado. Este terminal será fechado automaticamente em 10 segundos (ou pressione Enter para fechar agora)."; read -t 10'
 
         cmd_list.append(bash_cmd)
 
@@ -735,7 +738,6 @@ class App(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Erro ao Iniciar",
                                  f"Não foi possível iniciar o terminal.\nVerifique se 'x-terminal-emulator' está configurado.\n\nErro: {e}")
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = App()

@@ -7,17 +7,17 @@ get_boot_phys_part() {
     
     # Verifica se o boot é via Device Mapper (Ventoy)
     if [[ "$boot_dev" == *"/mapper/ventoy"* ]]; then
-        local map_id=$(sudo dmsetup table ventoy 2>/dev/null | awk '{print $4}')
+        # ADIÇÃO: 'head -n 1' garante que pegaremos apenas o primeiro mapeamento
+        # contornando a saída multilinha do modo GRUB2 do Ventoy
+        local map_id=$(sudo dmsetup table ventoy 2>/dev/null | head -n 1 | awk '{print $4}')
+        
         if [[ -n "$map_id" ]]; then
-            # O readlink resolve para algo como /sys/devices/.../block/sdb/sdb1
-            # O basename extrai apenas 'sdb1'
             local dev_name=$(basename "$(readlink -f "/sys/dev/block/$map_id")")
             echo "/dev/$dev_name"
         else
             echo "$boot_dev"
         fi
     else
-        # Se não for Ventoy, o findmnt geralmente já retorna /dev/sdXn
         echo "$boot_dev"
     fi
 }
@@ -25,10 +25,8 @@ get_boot_phys_part() {
 # Retorna apenas o nome do disco pai do boot (ex: sdb)
 get_boot_disk_name() {
     local phys_part=$(get_boot_phys_part)
-    # Tenta obter o nome do disco pai (PKNAME)
     local disk_name=$(lsblk -no pkname "$phys_part" 2>/dev/null)
     
-    # Se pkname for vazio (disco sem partições), usa o basename da partição
     if [[ -z "$disk_name" ]]; then
         basename "$phys_part"
     else
