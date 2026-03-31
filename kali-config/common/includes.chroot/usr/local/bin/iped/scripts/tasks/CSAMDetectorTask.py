@@ -332,7 +332,7 @@ def detect_best_config():
         # 1. Check if the model file physically exists on disk
         if os.path.exists(os.path.join(models_dir, filename)):
             # 2. Calculate the optimal batch size for this model/VRAM combo
-            batch = self.get_dynamic_batch(filename, vram_gb)
+            batch = get_dynamic_batch(filename, vram_gb)
             
             # 3. If batch > 0, hardware is capable; otherwise, try a lighter model
             if batch > 0:
