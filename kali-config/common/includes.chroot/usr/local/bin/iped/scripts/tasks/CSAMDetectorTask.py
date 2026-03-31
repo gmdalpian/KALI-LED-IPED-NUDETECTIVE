@@ -301,8 +301,8 @@ def carregar_e_configurar_modelo():
     
 def detect_best_config():
     """
-    Detects hardware VRAM and finds the best available model on disk 
-    with a dynamic batch size based on performance tables.
+    Detects VRAM and selects the best available model. Logs if the 
+    hardware was capable of a better model than the one found on disk.
     """
     vram_gb = 0
     try:
@@ -310,76 +310,106 @@ def detect_best_config():
         if torch.cuda.is_available():
             vram_bytes = torch.cuda.get_device_properties(0).total_memory
             vram_gb = vram_bytes / (1024**3)
-            logger.info(f"CSAMDetector: VRAM detected: {vram_gb:.2f} GB.")
+            logger.info(f"CSAMDetector: Hardware detected with {vram_gb:.2f} GB VRAM.")
         else:
-            logger.info("CSAMDetector: No GPU detected. Defaulting to CPU mode.")
+            logger.info("CSAMDetector: GPU not detected. Using CPU fallbacks.")
     except Exception:
         vram_gb = 0
 
-    # Ordered list of preferred model files (from highest to lowest quality)
-    priority_files = [
+    # Priority lists
+    gpu_files = [
         "pytorch_EVA02_L_3_1_1.pth",
         "pytorch_EVA02_B_v3_1.pth",
-        "pytorch_S_v3_1.pth",
-        "pytorch_B0_v3_1_2_fp32.onnx",
+        "pytorch_S_v3_1.pth"
+    ]
+    
+    cpu_files = [
+        "onnx_B0_tensorflow_v3_1.onnx",
         "MobileNetV4_v3_1.onnx",
         "pytorch_B0_v3_1_2_fp32.onnx"
     ]
 
     models_dir = System.getProperty('iped.root') + '/models/'
-    
-    for filename in priority_files:
-        # 1. Check if the model file physically exists on disk
-        if os.path.exists(os.path.join(models_dir, filename)):
-            # 2. Calculate the optimal batch size for this model/VRAM combo
-            batch = get_dynamic_batch(filename, vram_gb)
+    best_hardware_support = None
+    selected_model = None
+    selected_batch = 1
+
+    # 1. Search for best compatible GPU model
+    for filename in gpu_files:
+        batch = get_dynamic_batch(filename, vram_gb)
+        
+        # Track the best model the hardware could actually run
+        if batch > 0 and best_hardware_support is None:
+            best_hardware_support = filename
             
-            # 3. If batch > 0, hardware is capable; otherwise, try a lighter model
-            if batch > 0:
-                return filename, batch
-            else:
-                logger.debug(f"CSAMDetector: Skipping {filename} (Insufficient VRAM).")
-    
-    # Absolute fallback if no compatible files or hardware found
-    return "pytorch_B0_v3_1_2_fp32.onnx", 1
+        # Check if the file exists for the capable hardware
+        if batch > 0 and os.path.exists(os.path.join(models_dir, filename)):
+            selected_model = filename
+            selected_batch = batch
+            break
+
+    # 2. Check if selected model is inferior to what VRAM allows
+    if selected_model and best_hardware_support and selected_model != best_hardware_support:
+        logger.warn(f"CSAMDetector: Hardware supports {best_hardware_support}, but it was not found. Using {selected_model} instead.")
+    elif not selected_model and best_hardware_support:
+        logger.warn(f"CSAMDetector: GPU supports {best_hardware_support}, but no compatible GPU model files were found.")
+
+    # 3. If no GPU model selected, try CPU fallbacks
+    if selected_model is None:
+        for filename in cpu_files:
+            if os.path.exists(os.path.join(models_dir, filename)):
+                selected_model = filename
+                selected_batch = 1
+                break
+
+    # Final absolute fallback
+    if selected_model is None:
+        selected_model = "onnx_B0_tensorflow_v3_1.onnx"
+        selected_batch = 1
+
+    return selected_model, selected_batch
     
 def get_dynamic_batch(model_name, vram_gb):
     """
-    Calculates batch_size based on VRAM and model architecture, 
-    extrapolating for high-end hardware.
+    Calculates batch_size based on VRAM. Returns 0 if the hardware 
+    is insufficient for the specific model, forcing a fallback.
     """
     model_name = model_name.lower()
     
-    # Logic for EVA02 L (Large model)
+    # Critical Threshold: If VRAM is below 1GB, force fallback to CPU models
+    if vram_gb < 1.0:
+        return 0
+
+    # Logic for EVA02 L (Large)
     if "eva02_l" in model_name:
-        if vram_gb < 8: return 0 # N/A
+        if vram_gb < 8: return 0
         if vram_gb < 12: return 4
         if vram_gb < 16: return 10
         if vram_gb < 24: return 20
         if vram_gb < 32: return 20
-        return 32 # 32GB+
+        return 32 # 32GB+ extrapolation
         
-    # Logic for EVA02 B (Base model)
+    # Logic for EVA02 B (Base)
     elif "eva02_b" in model_name:
-        if vram_gb < 4: return 0 # N/A
+        if vram_gb < 4: return 0
         if vram_gb < 8: return 4
         if vram_gb < 12: return 8
         if vram_gb < 16: return 20
         if vram_gb < 24: return 32
         if vram_gb < 32: return 64
-        return 128 # 32GB+
+        return 128 # 32GB+ extrapolation
         
-    # Logic for PyTorch S (Small model)
+    # Logic for PyTorch S (Small)
     elif "_s_" in model_name or "pytorch_s" in model_name:
-        if vram_gb < 2: return 1 # Fallback CPU
+        if vram_gb < 2: return 4  # Specifically 1GB to 2GB range
         if vram_gb < 4: return 4
-        if vram_gb < 8: return 10
+        if vram_gb < 8: return 16
         if vram_gb < 12: return 32
-        if vram_gb < 24: return 64
-        return 128 # 24GB+
+        if vram_gb < 24: return 128
+        return 128 # 24GB+ extrapolation
         
-    return 1 # Default fallback   
-
+    return 1 # Default for unknown models
+    
 # Processes the images as an array of BufferedImage objects
 def processFrameTensors(frames_from_video):
     tensors = []
