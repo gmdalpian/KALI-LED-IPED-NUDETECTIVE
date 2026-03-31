@@ -17,7 +17,7 @@ import os
 import time
 import sys
 from java.lang import System, RuntimeException
-from iped.engine.task import HashDBLookupTask
+from iped.properties import ExtraProperties
 from java.awt import Color
 from javax.imageio import ImageIO
 from java.io import ByteArrayOutputStream
@@ -301,8 +301,8 @@ def carregar_e_configurar_modelo():
     
 def detect_best_config():
     """
-    Detects VRAM and searches for the best available model on disk,
-    following the priority table and respecting hardware constraints.
+    Detects hardware VRAM and finds the best available model on disk 
+    with a dynamic batch size based on performance tables.
     """
     vram_gb = 0
     try:
@@ -310,41 +310,75 @@ def detect_best_config():
         if torch.cuda.is_available():
             vram_bytes = torch.cuda.get_device_properties(0).total_memory
             vram_gb = vram_bytes / (1024**3)
-            capability = torch.cuda.get_device_capability(DEVICE)
-            logger.info(f"CSAMDetector: GPU detected with {vram_gb:.2f} GB of VRAM, capability version {capability}.")
+            logger.info(f"CSAMDetector: VRAM detected: {vram_gb:.2f} GB.")
         else:
-            logger.info("CSAMDetector: GPU not detected. Searching for CPU models.")
+            logger.info("CSAMDetector: No GPU detected. Defaulting to CPU mode.")
     except Exception:
         vram_gb = 0
 
-    # Profiles ordered from best to lightest
-    # vram_req: Minimum safety threshold to accept the profile
-    profiles = [
-        {"vram_req": 14.0, "model": "pytorch_EVA02_L_v3_1_1.pth",  "batch": 20},  # >=16 GB cards
-        {"vram_req": 10.0, "model": "pytorch_EVA02_L_v3_1_1.pth",  "batch": 10},  # 12GB cards
-        {"vram_req": 6.0,  "model": "pytorch_EVA02_L_v3_1_1.pth",  "batch": 5},  # 8GB cards
-        {"vram_req": 3.0,  "model": "pytorch_EVA02_B_v3_1.pth",    "batch": 5},  # 4GB cards
-        {"vram_req": 1.5,  "model": "pytorch_S_v3_1.pth",          "batch": 4},  # Margin for 2GB cards
-        {"vram_req": -1.0, "model": "onnx_B0_tensorflow_v3_1.onnx","batch": 1}, # CPU Fallback 1
-        {"vram_req": -2.0, "model": "MobileNetV4_v3_1.onnx",       "batch": 1}, # CPU Fallback 2
-        {"vram_req": -3.0, "model": "pytorch_B0_v3_1_2_fp32.onnx", "batch": 1}  # CPU Fallback 3          
+    # Ordered list of preferred model files (from highest to lowest quality)
+    priority_files = [
+        "pytorch_EVA02_L_3_1_1.pth",
+        "pytorch_EVA02_B_v3_1.pth",
+        "pytorch_S_v3_1.pth",
+        "pytorch_B0_v3_1_2_fp32.onnx",
+        "MobileNetV4_v3_1.onnx",
+        "pytorch_B0_v3_1_2_fp32.onnx"
     ]
 
     models_dir = System.getProperty('iped.root') + '/models/'
     
-    for profile in profiles:
-        # If the hardware meets the memory requirement...
-        if vram_gb >= profile["vram_req"]:
-            model_name = profile["model"]
-            if os.path.exists(os.path.join(models_dir, model_name)):
-                return model_name, profile["batch"]
+    for filename in priority_files:
+        # 1. Check if the model file physically exists on disk
+        if os.path.exists(os.path.join(models_dir, filename)):
+            # 2. Calculate the optimal batch size for this model/VRAM combo
+            batch = self.get_dynamic_batch(filename, vram_gb)
+            
+            # 3. If batch > 0, hardware is capable; otherwise, try a lighter model
+            if batch > 0:
+                return filename, batch
             else:
-                # Log a warning if the hardware supported a better model that wasn't found
-                if profile["vram_req"] > 1.0:
-                    logger.warn(f"CSAMDetector: Best model {model_name} not found in {models_dir}. Trying alternative models...")
-
-    # Final fallback if no files are found
-    return "onnx_B0_tensorflow_v3_1.onnx", 1 
+                logger.debug(f"CSAMDetector: Skipping {filename} (Insufficient VRAM).")
+    
+    # Absolute fallback if no compatible files or hardware found
+    return "pytorch_B0_v3_1_2_fp32.onnx", 1
+    
+def get_dynamic_batch(model_name, vram_gb):
+    """
+    Calculates batch_size based on VRAM and model architecture, 
+    extrapolating for high-end hardware.
+    """
+    model_name = model_name.lower()
+    
+    # Logic for EVA02 L (Large model)
+    if "eva02_l" in model_name:
+        if vram_gb < 8: return 0 # N/A
+        if vram_gb < 12: return 4
+        if vram_gb < 16: return 10
+        if vram_gb < 24: return 20
+        if vram_gb < 32: return 20
+        return 32 # 32GB+
+        
+    # Logic for EVA02 B (Base model)
+    elif "eva02_b" in model_name:
+        if vram_gb < 4: return 0 # N/A
+        if vram_gb < 8: return 4
+        if vram_gb < 12: return 8
+        if vram_gb < 16: return 20
+        if vram_gb < 24: return 32
+        if vram_gb < 32: return 64
+        return 128 # 32GB+
+        
+    # Logic for PyTorch S (Small model)
+    elif "_s_" in model_name or "pytorch_s" in model_name:
+        if vram_gb < 2: return 1 # Fallback CPU
+        if vram_gb < 4: return 4
+        if vram_gb < 8: return 10
+        if vram_gb < 12: return 32
+        if vram_gb < 24: return 64
+        return 128 # 24GB+
+        
+    return 1 # Default fallback   
 
 # Processes the images as an array of BufferedImage objects
 def processFrameTensors(frames_from_video):
@@ -790,7 +824,7 @@ class CSAMDetectorTask:
                     logger.warn(f"CSAMDetector: invalid dimensions for item {item.getName()} {width_meta}x{height_meta}")                        
 
             # Skip classification of images/videos with hits on IPED hashesDB database (see 'skipHashDBFiles' config property)
-            if (CSAM_SKIP_HASHDB_FILES and item.getExtraAttribute(HashDBLookupTask.STATUS_ATTRIBUTE) is not None):
+            if (CSAM_SKIP_HASHDB_FILES and item.getExtraAttribute(ExtraProperties.HASHDB_STATUS) is not None):
                 logger.debug(f"CSAMDetector: skipping item with HashDB hit {item.getName()}")
                 item.setExtraAttribute(AI_CLASSIFICATION_STATUS_ATTR, AI_CLASSIFICATION_SKIP_HASHDB)
                 return
@@ -898,7 +932,7 @@ class CSAMDetectorTask:
                         
                         # 8. Updates the cache (Using the correct hierarchical class)
                         CACHE.put(item.getHash(), (results['csam_score_formatado'], results['porn_score_formatado'], results['other_score_formatado'], class_info['class'], class_info['trigger_frame_index'], hit_perc_formatted, avg_conf_formatted))
-            
+
         except Exception as e:
             logger.error(f"CSAMDetector: exception processing item {item.getPath()} id {item.getId()}: {e}")
             item.setExtraAttribute(AI_CLASSIFICATION_STATUS_ATTR, AI_CLASSIFICATION_FAIL_NO_RESULTS)
@@ -1089,7 +1123,7 @@ class CSAMDetectorTask:
                     return softmax(stacked_outputs, axis=1) # Applies softmax
                 elif ONNX_MODEL_TYPE == 'tensorflow':
                     return stacked_outputs # Returns direct probabilities
-                    
+
         except Exception as e:
             error_msg = str(e).lower()
             # Identify fatal errors that invalidate the GPU context or memory
