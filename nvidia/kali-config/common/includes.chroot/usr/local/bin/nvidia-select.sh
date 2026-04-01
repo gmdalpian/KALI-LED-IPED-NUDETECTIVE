@@ -3,23 +3,23 @@
 LOG_FILE="/var/log/nvidia-select.log"
 KERNEL=$(uname -r)
 
-# --- Função de Logging Avançada (Grava no arquivo e no dmesg) ---
+# --- Função de Logging Avançada ---
 log() {
     local MSG="[NVIDIA-BOOT] $1"
     echo "$(date '+%Y-%m-%d %H:%M:%S') $MSG" >> "$LOG_FILE"
     echo "$MSG" > /dev/kmsg
 }
 
-log "===== INICIANDO SELEÇÃO DINÂMICA DE DRIVER NVIDIA ====="
+log "===== INICIANDO CARREGAMENTO DO DRIVER NVIDIA ====="
 
-# 1. Verificações Iniciais (Modo Seguro)
+# 1. Verificações Iniciais
 if grep -q "nonvidia" /proc/cmdline; then
     log "Aviso: Parâmetro 'nonvidia' detectado no boot. Abortando carregamento."
     exit 0
 fi
 
 if [ ! -x /usr/local/bin/gpu-detect.sh ]; then
-    log "ERRO CRÍTICO: /usr/local/bin/gpu-detect.sh não encontrado ou sem permissão de execução."
+    log "ERRO CRÍTICO: /usr/local/bin/gpu-detect.sh não encontrado."
     exit 1
 fi
 
@@ -31,65 +31,63 @@ if [ "$VENDOR" != "NVIDIA" ]; then
     exit 0
 fi
 
-# 2. Preparar diretórios base para o OverlayFS
-log "Criando diretórios de trabalho (work/upper) para OverlayFS em /run/ovl..."
-mkdir -p /run/ovl/{bin_work,bin_upper,xdrv_work,xdrv_upper,xext_work,xext_upper} || log "Aviso: Falha ao criar diretórios base do OverlayFS."
+# 2. Definição do Alvo Único
+TYPE="$DRIVER"
+SOURCE="/opt/nvidia/$TYPE/system_root"
 
-# 3. Função Principal de Projeção Virtual
-apply_nvidia_dynamic() {
-    local TYPE=$1
-    local SOURCE="/opt/nvidia/$TYPE/system_root"
+log "--------------------------------------------------------"
+log "Aplicando ambiente virtual isolado para o driver: $TYPE"
 
-    log "--------------------------------------------------------"
-    log "Tentando aplicar ambiente virtual isolado: $TYPE"
+if [ ! -d "$SOURCE" ]; then
+    log "ERRO FATAL: Diretório fonte $SOURCE não existe."
+    exit 1
+fi
 
-    if [ ! -d "$SOURCE" ]; then
-        log "ERRO: Diretório fonte $SOURCE não existe."
-        return 1
-    fi
+log "Criando diretórios de trabalho (work/upper) para OverlayFS..."
+mkdir -p /run/ovl/{bin_work,bin_upper,xdrv_work,xdrv_upper,xext_work,xext_upper}
 
-    # A. Módulos do Kernel (Bind Mount)
-    log "[Etapa 1/5] Montando módulos do kernel..."
-    mount --bind "$SOURCE/lib/modules/$KERNEL/kernel/drivers/video" /lib/modules/$KERNEL/kernel/drivers/video || { log "ERRO: Bind mount dos módulos falhou."; return 1; }
-    depmod -a || log "Aviso: Comando 'depmod -a' retornou erro."
+# A. Firmware GSP (AGORA É A ETAPA 1 - Prepara o terreno)
+log "[Etapa 1/6] Projetando firmware da GPU..."
+if [ -d "$SOURCE/usr/lib/firmware/nvidia" ]; then
+    mkdir -p /usr/lib/firmware/nvidia
+    mount -t overlay overlay -o lowerdir="$SOURCE/usr/lib/firmware/nvidia:/usr/lib/firmware/nvidia" /usr/lib/firmware/nvidia 2>/dev/null || \
+    mount --bind "$SOURCE/usr/lib/firmware/nvidia" /usr/lib/firmware/nvidia
+fi
 
-    # B. Firmware GSP (OverlayFS)
-    log "[Etapa 2/5] Projetando firmware da GPU..."
-    if [ -d "$SOURCE/lib/firmware/nvidia" ]; then
-        mkdir -p /lib/firmware/nvidia
-        mount -t overlay overlay -o lowerdir="$SOURCE/lib/firmware/nvidia:/lib/firmware/nvidia" /lib/firmware/nvidia 2>/dev/null || \
-        mount --bind "$SOURCE/lib/firmware/nvidia" /lib/firmware/nvidia || log "Aviso: Falha no mount do firmware."
-    fi
+# B. OpenCL e Vulkan
+log "[Etapa 2/6] Configurando registros OpenCL/Vulkan..."
+if [ -d "$SOURCE/etc/OpenCL" ]; then cp -a "$SOURCE/etc/OpenCL/." /etc/OpenCL/ 2>/dev/null || true; fi
+if [ -d "$SOURCE/etc/vulkan" ]; then cp -a "$SOURCE/etc/vulkan/." /etc/vulkan/ 2>/dev/null || true; fi
 
-    # C. Bibliotecas (ldconfig nativo)
-    log "[Etapa 3/5] Configurando cache de bibliotecas (ldconfig)..."
-    mkdir -p /etc/ld.so.conf.d
-    if [ -d "$SOURCE/usr/lib/x86_64-linux-gnu" ]; then
-        echo "$SOURCE/usr/lib/x86_64-linux-gnu" > /etc/ld.so.conf.d/99-nvidia.conf
-        ldconfig || log "Aviso: ldconfig falhou."
-    else
-        log "ERRO: Bibliotecas em $SOURCE/usr/lib/ ausentes."
-        return 1
-    fi
+# C. Bibliotecas (ldconfig nativo)
+log "[Etapa 3/6] Configurando cache de bibliotecas (ldconfig)..."
+mkdir -p /etc/ld.so.conf.d
+if [ -d "$SOURCE/usr/lib/x86_64-linux-gnu" ]; then
+    echo "$SOURCE/usr/lib/x86_64-linux-gnu" > /etc/ld.so.conf.d/99-nvidia.conf
+    ldconfig
+else
+    log "ERRO FATAL: Bibliotecas ausentes em $SOURCE/usr/lib/x86_64-linux-gnu"
+    exit 1
+fi
 
-    # D. Binários e Módulos Xorg (OverlayFS)
-    log "[Etapa 4/5] Aplicando OverlayFS em /usr/bin e diretórios do X11..."
-    mount -t overlay overlay -o lowerdir="$SOURCE/usr/bin:/usr/bin",upperdir=/run/ovl/bin_upper,workdir=/run/ovl/bin_work /usr/bin || return 1
+# D. Binários e Módulos Xorg
+log "[Etapa 4/6] Aplicando OverlayFS em /usr/bin e diretórios do X11..."
+mount -t overlay overlay -o lowerdir="$SOURCE/usr/bin:/usr/bin",upperdir=/run/ovl/bin_upper,workdir=/run/ovl/bin_work /usr/bin || exit 1
 
-    mkdir -p /usr/lib/xorg/modules/drivers
-    mkdir -p /usr/lib/xorg/modules/extensions
-    
-    if [ -d "$SOURCE/usr/lib/xorg/modules/drivers" ]; then
-        mount -t overlay overlay -o lowerdir="$SOURCE/usr/lib/xorg/modules/drivers:/usr/lib/xorg/modules/drivers",upperdir=/run/ovl/xdrv_upper,workdir=/run/ovl/xdrv_work /usr/lib/xorg/modules/drivers
-    fi
-    if [ -d "$SOURCE/usr/lib/xorg/modules/extensions" ]; then
-        mount -t overlay overlay -o lowerdir="$SOURCE/usr/lib/xorg/modules/extensions:/usr/lib/xorg/modules/extensions",upperdir=/run/ovl/xext_upper,workdir=/run/ovl/xext_work /usr/lib/xorg/modules/extensions
-    fi
+mkdir -p /usr/lib/xorg/modules/drivers
+mkdir -p /usr/lib/xorg/modules/extensions
 
-    # E. Configuração Dinâmica do X11 (Força o uso do driver NVIDIA)
-    log "[Etapa 5/5] Forçando xorg.conf dinâmico para liberar resolução da tela..."
-    mkdir -p /etc/X11/xorg.conf.d
-    cat > /etc/X11/xorg.conf.d/20-nvidia.conf <<EOF
+if [ -d "$SOURCE/usr/lib/xorg/modules/drivers" ]; then
+    mount -t overlay overlay -o lowerdir="$SOURCE/usr/lib/xorg/modules/drivers:/usr/lib/xorg/modules/drivers",upperdir=/run/ovl/xdrv_upper,workdir=/run/ovl/xdrv_work /usr/lib/xorg/modules/drivers
+fi
+if [ -d "$SOURCE/usr/lib/xorg/modules/extensions" ]; then
+    mount -t overlay overlay -o lowerdir="$SOURCE/usr/lib/xorg/modules/extensions:/usr/lib/xorg/modules/extensions",upperdir=/run/ovl/xext_upper,workdir=/run/ovl/xext_work /usr/lib/xorg/modules/extensions
+fi
+
+# E. Configuração Dinâmica do X11
+log "[Etapa 5/6] Forçando xorg.conf dinâmico para interface gráfica..."
+mkdir -p /etc/X11/xorg.conf.d
+cat > /etc/X11/xorg.conf.d/20-nvidia.conf <<EOF
 Section "Device"
     Identifier "Nvidia Card"
     Driver "nvidia"
@@ -97,47 +95,45 @@ Section "Device"
 EndSection
 EOF
 
-    # 4. Carregamento e Validação (Com log detalhado)
-    log ">>> Iniciando ativação do módulo NVIDIA no Kernel..."
-    if modprobe -v nvidia >> "$LOG_FILE" 2>&1; then
-        log "Módulo 'nvidia' base carregado. Subindo nvidia_drm (KMS) para interface gráfica..."
-        timeout 10 modprobe -v nvidia_drm modeset=1 >> "$LOG_FILE" 2>&1 || log "Aviso: Falha no nvidia_drm."
-        
-        log "Efetuando ping na GPU via nvidia-smi para validar CUDA/Userspace..."
+# F. Módulos do Kernel (MOVIDO PARA O FINAL - Só expõe quando tudo estiver pronto)
+log "[Etapa 6/6] Montando módulos do kernel e atualizando depmod..."
+mount --bind "$SOURCE/usr/lib/modules/$KERNEL/kernel/drivers/video" /usr/lib/modules/$KERNEL/kernel/drivers/video || { log "ERRO: Bind mount dos módulos falhou."; exit 1; }
+depmod -a || true
+
+# 4. Carregamento e Validação
+log ">>> Iniciando ativação dos módulos NVIDIA no Kernel..."
+
+# Mesmo que o udev já tenha tentado carregar no background durante o depmod, 
+# rodar modprobe novamente é seguro e garante as dependências (drm, uvm).
+if modprobe -v nvidia >> "$LOG_FILE" 2>&1; then
+    log "Módulo 'nvidia' base carregado. Subindo dependências (DRM e UVM)..."
+    
+    timeout 10 modprobe -v nvidia_drm modeset=1 >> "$LOG_FILE" 2>&1 || true
+    modprobe -v nvidia-uvm >> "$LOG_FILE" 2>&1 || true
+    
+    log "Aguardando udev criar os device nodes (necessário para o GSP)..."
+    udevadm settle timeout=5 || true
+    
+    log "Validando via nvidia-smi (Aguardando boot do GSP que pode levar até 15s)..."
+    SMI_OK=0
+    for i in {1..15}; do
         if nvidia-smi >> "$LOG_FILE" 2>&1; then
-            log "SUCESSO ABSOLUTO: Driver $TYPE validado. Interface gráfica e CUDA prontos para uso."
-            return 0
-        else
-            log "FALHA CRÍTICA: Módulo carregou, mas nvidia-smi falhou."
-            log "--- DUMP DE DIAGNÓSTICO ---"
-            lsmod | grep nvidia >> "$LOG_FILE"
-            dmesg | tail -n 25 >> "$LOG_FILE"
-            log "--- FIM DO DUMP ---"
+            SMI_OK=1
+            break
         fi
+        sleep 1
+    done
+
+    if [ "$SMI_OK" -eq 1 ]; then
+        log "SUCESSO ABSOLUTO: Driver $TYPE validado. Interface gráfica, CUDA e UVM prontos."
+        exit 0
     else
-        log "ERRO FATAL: modprobe nvidia falhou."
-        dmesg | tail -n 15 >> "$LOG_FILE"
+        log "FALHA CRÍTICA: Módulos carregaram, mas nvidia-smi falhou após 15 segundos."
+        dmesg | tail -n 25 >> "$LOG_FILE"
+        exit 1
     fi
-    
-    # 5. Rollback preventivo em caso de falha
-    log "Iniciando rollback de configurações ($TYPE) para tentar o próximo candidato..."
-    rm -f /etc/ld.so.conf.d/99-nvidia.conf
-    rm -f /etc/X11/xorg.conf.d/20-nvidia.conf
-    ldconfig
-    
-    umount /usr/bin 2>/dev/null || true
-    umount /lib/modules/$KERNEL/kernel/drivers/video 2>/dev/null || true
-    return 1
-}
-
-# 6. Lógica de Tentativa Dinâmica
-[[ "$DRIVER" == "open" ]] && ORDER=("open" "legacy") || ORDER=("legacy" "open")
-
-log "A arquitetura da GPU solicita a ordem de tentativa: ${ORDER[*]}"
-
-for T in "${ORDER[@]}"; do
-    apply_nvidia_dynamic "$T" && exit 0
-done
-
-log "FALHA GERAL: Esgotadas as opções de drivers NVIDIA. O sistema continuará com os drivers de vídeo genéricos/Nouveau."
-exit 1
+else
+    log "ERRO FATAL: modprobe nvidia falhou."
+    dmesg | tail -n 15 >> "$LOG_FILE"
+    exit 1
+fi

@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 
-echo "[+] ===== NVIDIA BUILD (OFFICIAL INSTALL + CAPTURE + XORG) ====="
+echo "[+] ===== NVIDIA BUILD (OFFICIAL INSTALL + CAPTURE + XORG + GSP + UVM) ====="
 
 cd /root/nvidia
 chmod +x *.run
 KERNEL=$(uname -r)
 
-# 1. Estrutura de armazenamento
+# 1. Estrutura de armazenamento base
 mkdir -p /opt/nvidia/{open,legacy}/system_root
 
 # Parâmetros originais validados para as versões 580 e 595
@@ -22,42 +22,50 @@ capture_install() {
     local MOD_TYPE=$3
     local TARGET="/opt/nvidia/$TYPE/system_root"
 
-    echo "[+] Rodando instalador oficial para $TYPE..."
+    echo "[+] Rodando instalador oficial para $TYPE ($MOD_TYPE)..."
     ./"$RUN_FILE" $COMMON_FLAGS --kernel-module-type="$MOD_TYPE"
 
-    # 2. Criar estrutura no destino espelhando os caminhos exatos
+    # 2. Criar estrutura no destino espelhando os caminhos exatos (Padrão UsrMerge)
     mkdir -p "$TARGET/usr/bin"
     mkdir -p "$TARGET/usr/lib/x86_64-linux-gnu"
-    mkdir -p "$TARGET/lib/modules/$KERNEL/kernel/drivers/video"
-    mkdir -p "$TARGET/lib/firmware/nvidia"
+    mkdir -p "$TARGET/usr/lib/modules/$KERNEL/kernel/drivers/video"
+    mkdir -p "$TARGET/usr/lib/firmware/nvidia"
     mkdir -p "$TARGET/usr/lib/xorg/modules/drivers"
     mkdir -p "$TARGET/usr/lib/xorg/modules/extensions"
+    mkdir -p "$TARGET/etc/OpenCL/vendors"
+    mkdir -p "$TARGET/etc/vulkan/icd.d"
 
     echo "[+] Capturando arquivos para $TARGET..."
     
-    # A. Binários
+    # A. Binários (nvidia-smi, etc)
     mv /usr/bin/nvidia* "$TARGET/usr/bin/" 2>/dev/null || true
     
-    # B. Bibliotecas (CUDA, NVML, Video Decoding)
+    # B. Bibliotecas (CUDA, NVML, Video Decoding para IA/Forense)
     mv /usr/lib/x86_64-linux-gnu/libnvidia* "$TARGET/usr/lib/x86_64-linux-gnu/" 2>/dev/null || true
     mv /usr/lib/x86_64-linux-gnu/libcuda* "$TARGET/usr/lib/x86_64-linux-gnu/" 2>/dev/null || true
     mv /usr/lib/x86_64-linux-gnu/libnvcuvid* "$TARGET/usr/lib/x86_64-linux-gnu/" 2>/dev/null || true
     
-    # C. Módulos do Kernel
-    mv /lib/modules/$KERNEL/kernel/drivers/video/nvidia* "$TARGET/lib/modules/$KERNEL/kernel/drivers/video/" 2>/dev/null || true
+    # C. Módulos do Kernel (incluindo o nvidia-uvm capturado)
+    mv /usr/lib/modules/$KERNEL/kernel/drivers/video/nvidia* "$TARGET/usr/lib/modules/$KERNEL/kernel/drivers/video/" 2>/dev/null || true
     
-    # D. Firmware (GSP)
-    if [ -d /lib/firmware/nvidia ]; then
-        mv /lib/firmware/nvidia/* "$TARGET/lib/firmware/nvidia/" 2>/dev/null || true
+    # D. Firmware (GSP) - Captura recursiva no caminho real
+    if [ -d /usr/lib/firmware/nvidia ]; then
+        cp -a /usr/lib/firmware/nvidia/. "$TARGET/usr/lib/firmware/nvidia/" 2>/dev/null || true
+        rm -rf /usr/lib/firmware/nvidia/* 2>/dev/null || true
     fi
 
-    # E. Módulos do Servidor Gráfico (Xorg)
+    # E. Módulos do Servidor Gráfico (Xorg) - Resolve o 800x600
     mv /usr/lib/xorg/modules/drivers/nvidia* "$TARGET/usr/lib/xorg/modules/drivers/" 2>/dev/null || true
     mv /usr/lib/xorg/modules/extensions/libglxserver_nvidia* "$TARGET/usr/lib/xorg/modules/extensions/" 2>/dev/null || true
+
+    # F. Aceleração OpenCL/Vulkan (Para Hashcat e IPED)
+    mv /etc/OpenCL/vendors/nvidia.icd "$TARGET/etc/OpenCL/vendors/" 2>/dev/null || true
+    mv /etc/vulkan/icd.d/nvidia_icd.json "$TARGET/etc/vulkan/icd.d/" 2>/dev/null || true
 
     # 3. Limpar rastros antes de rodar a próxima versão
     rm -f /usr/bin/nvidia* /usr/lib/x86_64-linux-gnu/libnvidia* /usr/lib/x86_64-linux-gnu/libcuda* || true
     rm -f /usr/lib/xorg/modules/drivers/nvidia* /usr/lib/xorg/modules/extensions/libglxserver_nvidia* || true
+    rm -rf /etc/OpenCL/vendors/nvidia* /etc/vulkan/icd.d/nvidia* || true
 }
 
 # 4. Execução das capturas
@@ -68,4 +76,4 @@ capture_install "open" "$RUN_NEW" "open"
 systemctl enable nvidia-select.service
 rm -rf /root/nvidia/*.run
 
-echo "[+] ===== FINALIZADO ====="
+echo "[+] ===== FINALIZADO COM SUCESSO ====="
