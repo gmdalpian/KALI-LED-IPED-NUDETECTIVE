@@ -1,0 +1,3 @@
+#!/bin/bash
+# Força renderização por software (Cairo) apenas para o Zenity para evitar crash no Nouveau
+env LIBGL_ALWAYS_SOFTWARE=1 GSK_RENDERER=cairo /usr/bin/zenity "$@"
