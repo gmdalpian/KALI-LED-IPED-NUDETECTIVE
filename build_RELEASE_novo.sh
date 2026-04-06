@@ -95,9 +95,8 @@ do_build() {
 
     if [ -f "$ISO_PATH" ]; then
         md5sum "$ISO_PATH" > "${ISO_PATH}.md5"
-        rm -rf ${EXTERNAL_DISK}/images/*
-        FINAL_NAME="KALI-LED-IPED-NUDETECTIVE-$(date -I)"
-        if [[ "$ACTION" == "nvidia" || "$OPTION" == "nvidia" || "$ACTION" == "all" ]]; then
+        FINAL_NAME="KALI-LED-IPED-NUDETECTIVE-$(date -I)-CSAM-TRIAGE"
+        if [[ "$ACTION" == "nvidia" || "$OPTION" == "nvidia" ]]; then
             FINAL_NAME+="_NVIDIA"
         fi
         cp "$ISO_PATH" "${EXTERNAL_DISK}/images/${FINAL_NAME}.iso"

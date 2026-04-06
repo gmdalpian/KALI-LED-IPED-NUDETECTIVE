@@ -401,10 +401,10 @@ def get_dynamic_batch(model_name, vram_gb):
         
     # Logic for PyTorch S (Small)
     elif "_s_" in model_name or "pytorch_s" in model_name:
-        if vram_gb < 2: return 4  # Specifically 1GB to 2GB range
-        if vram_gb < 4: return 4
-        if vram_gb < 8: return 16
-        if vram_gb < 12: return 32
+        if vram_gb < 2: return 10  # Specifically 1GB to 2GB range
+        if vram_gb < 4: return 16
+        if vram_gb < 8: return 32
+        if vram_gb < 12: return 64
         if vram_gb < 24: return 128
         return 128 # 24GB+ extrapolation
         
