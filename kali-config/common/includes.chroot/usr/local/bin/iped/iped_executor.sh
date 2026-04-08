@@ -171,6 +171,13 @@ setup_output_dir() {
         DESKTOP_FILE="IPED-Caso.desktop"
         LOG_FILE_PATH=""
         KEYWORD_FILE_PATH="$IPED_DIR/palavras-chave.txt"
+		
+        if [ "$PROFILE" == "csam_triage" ] || [ "$PROFILE" == "triage" ]; then
+            echo "AVISO: Perfil '$PROFILE' sem partição Triage pode causar falta de memória."
+            zenity --warning --title="Partição Triage Não Encontrada" \
+                   --text="Para o perfil '$PROFILE', é altamente recomendável usar uma partição 'IPED-TRIAGE' para armazenar o caso e criar um arquivo de SWAP.\n\nContinuar pode causar instabilidade ou falta de memória." \
+                   --width=400
+        fi		
     fi
 
     if [ -d "$OUTPUT_DIR" ]; then
@@ -318,7 +325,7 @@ if ! $CONTINUE_PROCESSING; then
 fi
 
 # =========================================================
-# DETECÇÃO DE GPU
+# DETECÇÃO DE GPU E SELEÇÃO DE AMBIENTE PYTHON
 # =========================================================
 PYTHON_TARGET=""
 if [ -f "$GPU_DETECT_SCRIPT" ]; then
@@ -326,14 +333,23 @@ if [ -f "$GPU_DETECT_SCRIPT" ]; then
     
     CANDIDATO=""
     if [ "$VENDOR" = "NVIDIA" ]; then
-        [ "$DRIVER" = "open" ] && CANDIDATO="$VENV_CUDA"
-        [ "$DRIVER" = "legacy" ] && CANDIDATO="$VENV_CUDA_LEGACY"
-    elif [ "$VENDOR" = "AMD" ]; then
+        if [ "$DRIVER" = "open" ]; then
+            CANDIDATO="$VENV_CUDA"
+        elif [ "$DRIVER" = "legacy" ]; then
+            CANDIDATO="$VENV_CUDA_LEGACY"
+        fi
+    elif [ "$VENDOR" = "AMD" ] && [ "$DRIVER" != "none" ]; then
+        # Só entra aqui se for uma GPU AMD discreta (ex: RX 6000+)
         CANDIDATO="$VENV_ROCM"
     fi
 
+    # Valida se o caminho do ambiente existe
     if [ -n "$CANDIDATO" ] && [ -f "$CANDIDATO" ]; then
         PYTHON_TARGET="$CANDIDATO"
+        echo "Hardware Detectado: $VENDOR ($ARCH) - Driver: $DRIVER"
+        echo "Ambiente Ativo: $PYTHON_TARGET"
+    else
+        echo "Modo CPU: Hardware detectado ($VENDOR $ARCH) não suporta aceleração estável."
     fi
 fi
 # =========================================================
