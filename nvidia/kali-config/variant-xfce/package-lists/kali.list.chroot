@@ -72,3 +72,4 @@ clinfo
 libnuma1
 libelf1
 libpciaccess0
+rocm-smi
