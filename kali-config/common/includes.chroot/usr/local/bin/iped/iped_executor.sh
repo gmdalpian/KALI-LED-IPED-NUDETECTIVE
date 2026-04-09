@@ -131,6 +131,33 @@ setup_output_dir() {
             
             sudo cp "$IPED_DIR/LocalConfig-triage.txt" "$IPED_DIR/LocalConfig.txt"
 
+            # --- INÍCIO DA LÓGICA DE BALANCEAMENTO DE THREADS/RAM ---
+            # Coleta o total de memória em KB e converte para MB
+            local total_mem_kb=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+            local total_mem_mb=$((total_mem_kb / 1024))
+            
+            # Calcula o número máximo de threads (1 thread para cada 1024 MB)
+            local max_threads=$((total_mem_mb / 1024))
+            
+            # Garante que o sistema rodará com pelo menos 2 threads, mesmo em máquinas muito limitadas
+            if [ "$max_threads" -lt 2 ]; then
+                max_threads=2
+            fi
+            
+            local cpu_cores=$(nproc)
+            
+            # Se a quantidade de núcleos lógicos for maior que a memória em GB, limita o IPED
+            if [ "$cpu_cores" -gt "$max_threads" ]; then
+                echo "AVISO: Pouca memória por núcleo detectada (Cores: $cpu_cores, RAM: ${total_mem_mb}MB)."
+                echo "Ajustando numThreads de 'default' para '$max_threads' em LocalConfig.txt."
+                
+                # Altera a configuração do IPED no arquivo copiado
+                sudo sed -i "s/^numThreads = default/numThreads = $max_threads/" "$IPED_DIR/LocalConfig.txt"
+            else
+                echo "Memória suficiente detectada (Cores: $cpu_cores, RAM: ${total_mem_mb}MB). Mantendo numThreads = default."
+            fi
+            # --- FIM DA LÓGICA DE BALANCEAMENTO DE THREADS/RAM ---
+
             # Lógica de SWAP
             if [ "$PROFILE" == "csam_triage" ] || [ "$PROFILE" == "triage" ]; then
                 if [ "$(cat /proc/swaps | wc -l)" -le 1 ]; then
