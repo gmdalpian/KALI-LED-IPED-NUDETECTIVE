@@ -85,15 +85,26 @@ if [ -d "$SOURCE/usr/lib/xorg/modules/extensions" ]; then
 fi
 
 # E. Configuração Dinâmica do X11
-log "[Etapa 5/6] Forçando xorg.conf dinâmico para interface gráfica..."
-mkdir -p /etc/X11/xorg.conf.d
-cat > /etc/X11/xorg.conf.d/20-nvidia.conf <<EOF
+log "[Etapa 5/6] Configurando interface gráfica..."
+
+# Procura por placas de vídeo primárias (VGA - Classe 0300) da Intel (8086) ou AMD (1002)
+IGPU_DETECTED=$(lspci -nn -d ::0300 | grep -iE "8086:|1002:")
+
+if [ -n "$IGPU_DETECTED" ]; then
+    log "-> Sistema híbrido detectado (Intel/AMD atua como tela primária)."
+    log "-> Ignorando xorg.conf exclusivo para NVIDIA (Evitando erro de tela preta)."
+else
+    log "-> Desktop ou NVIDIA-only detectado."
+    log "-> Forçando xorg.conf dinâmico para interface gráfica..."
+    mkdir -p /etc/X11/xorg.conf.d
+    cat > /etc/X11/xorg.conf.d/20-nvidia.conf <<EOF
 Section "Device"
     Identifier "Nvidia Card"
     Driver "nvidia"
     VendorName "NVIDIA Corporation"
 EndSection
 EOF
+fi
 
 # F. Módulos do Kernel (MOVIDO PARA O FINAL - Só expõe quando tudo estiver pronto)
 log "[Etapa 6/6] Montando módulos do kernel e atualizando depmod..."
