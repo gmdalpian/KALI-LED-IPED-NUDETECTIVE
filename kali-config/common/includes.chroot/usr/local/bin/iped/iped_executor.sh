@@ -328,7 +328,7 @@ fi
 # DETECÇÃO DE GPU E SELEÇÃO DE AMBIENTE PYTHON
 # =========================================================
 PYTHON_TARGET=""
-if [ -f "$GPU_DETECT_SCRIPT" ]; then
+if [ -f "$GPU_DETECT_SCRIPT" ] && ! grep -q "nonvidia" /proc/cmdline; then
     eval $($GPU_DETECT_SCRIPT) 
     
     CANDIDATO=""
