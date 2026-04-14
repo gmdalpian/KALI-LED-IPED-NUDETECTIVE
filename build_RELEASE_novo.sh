@@ -5,8 +5,17 @@ BASE_DIR="/home/kali"
 EXTERNAL_DISK="/run/media/kali/DISCO_EXTERNO"
 RELEASE=$1
 ACTION=$2
-OPTION=$3
 NVIDIA_SOURCE="$EXTERNAL_DISK/nvidia"
+
+# --- Avaliação de Flags Auxiliares ---
+NVIDIA_FLAG=false
+GLOBAL_FLAG=false
+
+# Verifica todos os argumentos passados para ativar as flags, independente da ordem
+for arg in "$@"; do
+    if [[ "$arg" == "nvidia" ]]; then NVIDIA_FLAG=true; fi
+    if [[ "$arg" == "global" ]]; then GLOBAL_FLAG=true; fi
+done
 
 # --- Função de Verificação de Erro ---
 check_status() {
@@ -32,7 +41,7 @@ do_copy() {
     check_status "Extração do arquivo kali-config.zip"
 
     # --- BLOCO NVIDIA: Integração da estrutura de pastas ---
-    if [[ "$ACTION" == "nvidia" || "$OPTION" == "nvidia" || "$ACTION" == "all" && "$OPTION" == "nvidia" ]]; then
+    if [ "$NVIDIA_FLAG" = true ]; then
         echo "--- [AÇÃO: NVIDIA] Mesclando estrutura de pastas de $NVIDIA_SOURCE ---"
         
         if [ -d "$NVIDIA_SOURCE/kali-config" ]; then
@@ -55,7 +64,7 @@ do_copy() {
         fi
     done	
 
-    if [[ "$ACTION" == "nvidia" || "$OPTION" == "nvidia" || "$ACTION" == "all" && "$OPTION" == "nvidia" ]]; then
+    if [ "$NVIDIA_FLAG" = true ]; then
         mkdir -p ${BASE_DIR}/kali-config/common/includes.chroot/opt
         for f in ${EXTERNAL_DISK}/python/NVIDIA*; do
             if [ -e "$f" ]; then
@@ -64,6 +73,25 @@ do_copy() {
             fi
         done
     fi    
+
+    # --- BLOCO GLOBAL: Customizações pré-build ---
+    if [ "$GLOBAL_FLAG" = true ]; then
+        echo '--- [AÇÃO: GLOBAL] Customizando versão global ---'
+        
+        # Remoção de atalhos e binários proprietários
+        rm -rf "${BASE_DIR}/kali-config/common/includes.chroot/usr/local/bin/LED"
+        rm -rf "${BASE_DIR}/kali-config/common/includes.chroot/usr/local/bin/NuDetective"
+        rm -rf "${BASE_DIR}/kali-config/common/includes.chroot/etc/skel/Desktop/LED - Escolher Midia.desktop"
+        rm -rf "${BASE_DIR}/kali-config/common/includes.chroot/etc/skel/Desktop/LED - Montar e Vasculhar.desktop"
+        rm -rf "${BASE_DIR}/kali-config/common/includes.chroot/etc/skel/Desktop/Nudetective.desktop"
+        
+        # Cópia do papel de parede
+        mkdir -p "${BASE_DIR}/kali-config/common/includes.chroot/usr/share/backgrounds/kali/"
+        cp -f "${EXTERNAL_DISK}/kali-config/common/includes.chroot/etc/skel/Pictures/plano_de_fundo_kali1.jpg" \
+              "${BASE_DIR}/kali-config/common/includes.chroot/usr/share/backgrounds/kali/kali-cubes-16x9.jpg"
+        
+        check_status "Customização da versão global"
+    fi
 
     # 4. Sincronização Final para a pasta de build
     chmod -R +x ${BASE_DIR}/kali-config
@@ -95,10 +123,18 @@ do_build() {
 
     if [ -f "$ISO_PATH" ]; then
         md5sum "$ISO_PATH" > "${ISO_PATH}.md5"
+        
+        # Construção dinâmica do nome da ISO com base nas flags
         FINAL_NAME="KALI-LED-IPED-NUDETECTIVE-$(date -I)-CSAM-TRIAGE"
-        if [[ "$ACTION" == "nvidia" || "$OPTION" == "nvidia" ]]; then
-            FINAL_NAME+="_NVIDIA"
+        
+        if [ "$NVIDIA_FLAG" = true ]; then
+            FINAL_NAME="${FINAL_NAME}_NVIDIA"
         fi
+        
+        if [ "$GLOBAL_FLAG" = true ]; then
+            FINAL_NAME="${FINAL_NAME}_GLOBAL"
+        fi
+
         cp "$ISO_PATH" "${EXTERNAL_DISK}/images/${FINAL_NAME}.iso"
         check_status "Cópia da ISO final para o disco externo"
         
@@ -112,14 +148,18 @@ do_build() {
 
 # --- Lógica Principal ---
 if [ -z "$RELEASE" ] || [ -z "$ACTION" ]; then
-    echo "Uso: $0 <VERSAO> <all|copy|build|nvidia> [nvidia]"
+    echo "Uso: $0 <VERSAO> <all|copy|build> [nvidia] [global]"
     exit 1
+fi
+
+# Se a ação passada for diretamente uma das flags, forçamos o ciclo completo ('all')
+if [[ "$ACTION" == "nvidia" || "$ACTION" == "global" ]]; then
+    ACTION="all"
 fi
 
 case $ACTION in
     all) do_copy; do_build ;;
     copy) do_copy ;;
     build) do_build ;;
-    nvidia) do_copy; do_build ;;
-    *) echo "Erro: Ação '$ACTION' inválida."; exit 1 ;;
+    *) echo "Erro: Ação '$ACTION' inválida. Use all, copy ou build."; exit 1 ;;
 esac

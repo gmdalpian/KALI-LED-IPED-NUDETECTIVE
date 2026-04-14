@@ -23,7 +23,7 @@ rm -rf /home/kali/live-build-config/kali-config/common/includes.chroot/usr/local
 rm -rf '/home/kali/live-build-config/kali-config/common/includes.chroot/etc/skel/Desktop/LED - Escolher Midia.desktop'
 rm -rf '/home/kali/live-build-config/kali-config/common/includes.chroot/etc/skel/Desktop/LED - Montar e Vasculhar.desktop'
 rm -rf /home/kali/live-build-config/kali-config/common/includes.chroot/etc/skel/Desktop/Nudetective.desktop
-cp -f /media/kali/DISCO_EXTERNO/kali-config/common/includes.chroot/etc/skel/Pictures/plano_de_fundo_kali1.jpg /home/kali/live-build-config/kali-config/common/includes.chroot/etc/skel/Pictures/plano_de_fundo.jpg
+cp -f /media/kali/DISCO_EXTERNO/kali-config/common/includes.chroot/etc/skel/Pictures/plano_de_fundo_kali1.jpg /usr/share/backgrounds/kali/kali-cubes-16x9.jpg
 
 
 echo Gera o novo ISO --version $RELEASE
