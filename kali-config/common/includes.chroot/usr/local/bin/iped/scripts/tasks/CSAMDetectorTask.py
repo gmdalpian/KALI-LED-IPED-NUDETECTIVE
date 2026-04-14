@@ -9,7 +9,7 @@ see https://github.com/sepinf-inc/IPED/wiki/User-Manual#python-modules
 
 __author__ = "Guilherme Dalpian"
 __email__ = "gmdalpian@gmail.com"
-__version__ = "1.5" # Auto configurations - Mixed Precision Optimizations
+__version__ = "1.6" # Auto configurations - batch size according to memory and model
 
 import traceback
 import io
@@ -318,7 +318,7 @@ def detect_best_config():
 
     # Priority lists
     gpu_files = [
-        "pytorch_EVA02_L_3_1_1.pth",
+        "pytorch_EVA02_L_v3_1_1.pth",
         "pytorch_EVA02_B_v3_1.pth",
         "pytorch_S_v3_1.pth"
     ]
@@ -382,11 +382,11 @@ def get_dynamic_batch(model_name, vram_gb):
 
     # Logic for EVA02 L (Large)
     if "eva02_l" in model_name:
-        if vram_gb < 8: return 0
-        if vram_gb < 12: return 4
-        if vram_gb < 16: return 10
+        if vram_gb < 6: return 0
+        if vram_gb < 8: return 4
+        if vram_gb < 12: return 10
+        if vram_gb < 16: return 20
         if vram_gb < 24: return 20
-        if vram_gb < 32: return 20
         return 32 # 32GB+ extrapolation
         
     # Logic for EVA02 B (Base)
