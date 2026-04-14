@@ -6,6 +6,8 @@ import subprocess
 import os
 import json
 import math
+import gettext
+import locale
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
     QListWidget, QPushButton, QLabel, QMessageBox,
@@ -13,6 +15,20 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QIcon
+
+# --- CONFIGURAÇÃO DE INTERNACIONALIZAÇÃO (i18n) ---
+APP_NAME = "blockdev_gui"
+LOCALE_DIR = "/usr/share/locale"
+
+# Tenta definir o locale com base no ambiente do sistema
+try:
+    locale.setlocale(locale.LC_ALL, '')
+except locale.Error:
+    pass
+
+translate = gettext.translation(APP_NAME, LOCALE_DIR, fallback=True)
+_ = translate.gettext
+# --------------------------------------------------
 
 # --- CONSTANTES DE CONFIGURAÇÃO ---
 ICON_DIR = "/home/kali/Pictures/"
@@ -26,7 +42,7 @@ FORENSIC_UTILS = "/home/kali/forensic_utils.sh"
 class BlockDeviceManager(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Gerenciador de Bloqueio de Bloco - MODO LIVE")
+        self.setWindowTitle(_("Block Device Lock Manager - LIVE MODE"))
         self.setMinimumWidth(650)
         # Chama a nova lógica de detecção baseada no utilitário centralizado
         self.boot_device = self.get_boot_device()
@@ -39,7 +55,7 @@ class BlockDeviceManager(QWidget):
         Isso garante que o disco pai (ex: sdb) seja ignorado corretamente.
         """
         if not os.path.exists(FORENSIC_UTILS):
-            print(f"ERRO: Utilitário {FORENSIC_UTILS} não encontrado.")
+            print(_("ERROR: Utility {} not found.").format(FORENSIC_UTILS))
             return None
 
         try:
@@ -52,51 +68,46 @@ class BlockDeviceManager(QWidget):
             boot_disk = result.stdout.strip()
             
             if boot_disk and not boot_disk.startswith("ERRO"):
-                print(f"Utilitário identificou o disco de boot como: {boot_disk}")
+                print(_("Utility identified the boot disk as: {}").format(boot_disk))
                 return boot_disk
             return None
             
         except subprocess.CalledProcessError as e:
-            print(f"Falha ao executar forensic_utils.sh: {e}")
+            print(_("Failed to execute forensic_utils.sh: {}").format(e))
             return None
         except Exception as e:
-            print(f"Erro inesperado ao identificar boot: {e}")
+            print(_("Unexpected error identifying boot: {}").format(e))
             return None
-
-    # --- O restante do código permanece igual ao original para manter a funcionalidade ---
 
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
         if self.boot_device:
-            main_layout.addWidget(QLabel(f"Dispositivo de Boot (Excluído): /dev/{self.boot_device}"))
+            main_layout.addWidget(QLabel(_("Boot Device (Excluded): /dev/{}").format(self.boot_device)))
         else:
-            main_layout.addWidget(QLabel("Não foi possível identificar o dispositivo de Boot."))
+            main_layout.addWidget(QLabel(_("Could not identify the Boot device.")))
 
-        main_layout.addWidget(QLabel("Dispositivos de Bloco Disponíveis (Verde: RO / Vermelho: RW):"))
+        main_layout.addWidget(QLabel(_("Available Block Devices (Green: RO / Red: RW):")))
         self.device_list = QListWidget()
         self.device_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
         main_layout.addWidget(self.device_list)
 
         button_layout = QHBoxLayout()
-        self.refresh_button = QPushButton("Atualizar Lista")
+        self.refresh_button = QPushButton(_("Refresh List"))
         self.refresh_button.clicked.connect(self.load_devices)
         button_layout.addWidget(self.refresh_button)
 
-        self.block_button = QPushButton("Bloquear Escrita (RO)")
+        self.block_button = QPushButton(_("Block Write (RO)"))
         self.block_button.clicked.connect(lambda: self.set_write_protect(1))
         self.block_button.setEnabled(False) 
         button_layout.addWidget(self.block_button)
 
-        self.unblock_button = QPushButton("Liberar Escrita (RW)")
+        self.unblock_button = QPushButton(_("Allow Write (RW)"))
         self.unblock_button.clicked.connect(lambda: self.set_write_protect(0))
         self.unblock_button.setEnabled(False) 
         button_layout.addWidget(self.unblock_button)
         
         main_layout.addLayout(button_layout)
         self.device_list.itemSelectionChanged.connect(self.update_buttons)
-
-    # ... [Métodos _format_size_bytes, _update_desktop_icon, _get_ro_status omitidos para brevidade] ...
-    # ... [Métodos get_block_devices, load_devices, _get_all_targets permanecem os mesmos] ...
 
     def _format_size_bytes(self, size_bytes):
         if not size_bytes or size_bytes == 0: return "0 B"
@@ -111,7 +122,7 @@ class BlockDeviceManager(QWidget):
     def _update_desktop_icon(self, is_secure):
         icon_file = ICON_GREEN if is_secure else ICON_RED
         icon_path = ICON_DIR + icon_file
-        next_action_name = "Liberar Escrita" if is_secure else "Bloquear Escrita"
+        next_action_name = _("Allow Write") if is_secure else _("Block Write")
         try:
             subprocess.run(["sudo", "sed", "-i", f"s|^Icon=.*|Icon={icon_path}|", DESKTOP_FILE_PATH], check=True)
             subprocess.run(["sudo", "sed", "-i", f"s|^Name=.*|Name={next_action_name}|", DESKTOP_FILE_PATH], check=True)
@@ -137,14 +148,14 @@ class BlockDeviceManager(QWidget):
             for disk in data.get('blockdevices', []):
                 if disk.get('type') == 'disk' and disk.get('name') != self.boot_device:
                     max_partition_size = 0
-                    partition_label = "N/A"
+                    partition_label = _("Unlabeled")
                     for child in disk.get('children', []):
                         if child.get('type') == 'part':
                             size_bytes = int(child.get('size', 0))
                             if size_bytes > max_partition_size:
                                 max_partition_size = size_bytes
                                 label = child.get('label')
-                                partition_label = f"[{label}]" if label else "Sem Rótulo"
+                                partition_label = f"[{label}]" if label else _("Unlabeled")
                     ro_status = self._get_ro_status(disk.get('name'))
                     devices.append({
                         "name": disk.get('name'), "ro_status": ro_status,
@@ -152,7 +163,7 @@ class BlockDeviceManager(QWidget):
                         "model": disk.get('model', 'N/A'), "partition_label": partition_label
                     })
         except Exception as e:
-            QMessageBox.critical(self, "Erro", f"Falha na listagem: {e}")
+            QMessageBox.critical(self, _("Error"), _("Listing failed: {}").format(e))
         return devices
 
     def load_devices(self):
@@ -162,11 +173,15 @@ class BlockDeviceManager(QWidget):
         for dev in devices:
             name, ro_status = dev["name"], dev["ro_status"]
             if ro_status == "1":
-                status, color = "BLOQUEADO (RO)", QColor("green")
+                status, color = _("BLOCKED (RO)"), QColor("green")
             else:
-                status, color = "DESBLOQUEADO (RW)", QColor("red")
+                status, color = _("UNBLOCKED (RW)"), QColor("red")
                 is_global_secure = False
-            item = QListWidgetItem(f"/dev/{name} | Status: {status}\n   Tamanho: {dev['size']} | Partição: {dev['partition_label']}")
+            
+            item_text = _("/dev/{name} | Status: {status}\n   Size: {size} | Partition: {partition}").format(
+                name=name, status=status, size=dev['size'], partition=dev['partition_label']
+            )
+            item = QListWidgetItem(item_text)
             item.setForeground(color)
             item.setData(Qt.ItemDataRole.UserRole, name) 
             self.device_list.addItem(item)
@@ -183,28 +198,34 @@ class BlockDeviceManager(QWidget):
     def _unmount_target(self, target_name):
         try:
             subprocess.run(["sudo", "umount", "-f", f"/dev/{target_name}"], capture_output=True, text=True, check=True)
-            return f"Sucesso: /dev/{target_name} desmontado."
+            return _("Success: /dev/{} unmounted.").format(target_name)
         except subprocess.CalledProcessError as e:
-            if "not mounted" in e.stderr or e.returncode == 32: return f"Ignorado: /dev/{target_name} não estava montado."
-            return f"Falha em /dev/{target_name}: {e.stderr.strip()}"
+            if "not mounted" in e.stderr or e.returncode == 32: 
+                return _("Ignored: /dev/{} was not mounted.").format(target_name)
+            return _("Failed on /dev/{}: {}").format(target_name, e.stderr.strip())
 
     def set_write_protect(self, ro_state):
         selected_items = self.device_list.selectedItems()
         if not selected_items: return
         device_name = selected_items[0].data(Qt.ItemDataRole.UserRole)
         command_arg = "--setro" if ro_state == 1 else "--setrw"
-        action = "Bloquear Escrita (RO)" if ro_state == 1 else "Liberar Escrita (RW)"
-        reply = QMessageBox.question(self, action, f"Deseja {action.lower()} em /dev/{device_name}?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        
+        action_en = "Block Write (RO)" if ro_state == 1 else "Allow Write (RW)"
+        action = _(action_en)
+        
+        msg = _("Do you want to {action} on /dev/{device}?").format(action=action.lower(), device=device_name)
+        reply = QMessageBox.question(self, action, msg, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        
         if reply == QMessageBox.StandardButton.No: return
         targets = self._get_all_targets(device_name)
-        log_messages = ["\n--- Desmontagem ---"]
+        log_messages = [_("\n--- Unmounting ---")]
         for target in targets: log_messages.append(self._unmount_target(target))
-        log_messages.append("\n--- Permissão ---")
+        log_messages.append(_("\n--- Permission ---"))
         success_count = 0
         for target in targets:
             try:
                 subprocess.run(["sudo", "blockdev", command_arg, f"/dev/{target}"], check=True)
-                log_messages.append(f"Sucesso: /dev/{target}")
+                log_messages.append(_("Success: /dev/{}").format(target))
                 success_count += 1
             except: pass
         self.load_devices()

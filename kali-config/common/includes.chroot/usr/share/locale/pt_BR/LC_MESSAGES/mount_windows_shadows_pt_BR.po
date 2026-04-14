@@ -1,0 +1,24 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: mount_windows_shadows 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-10-25 10:00-0300\n"
+"PO-Revision-Date: 2023-10-25 10:00-0300\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Trying to mount Windows Volume Shadow Copies (VSS), if any exist"
+msgstr "Tenta montar as Volume Shadow Copy (VSS) do Windows, caso existam"
+
+msgid "Found VSS on partition %s"
+msgstr "Encontrou VSS na particao %s"
+
+msgid "Found VSS on BitLocker partition %s"
+msgstr "Encontrou VSS na particao bitlocker %s"
+
+msgid "No VSS shadow copies were found"
+msgstr "Nao foram localizadas copias de sombra VSS"

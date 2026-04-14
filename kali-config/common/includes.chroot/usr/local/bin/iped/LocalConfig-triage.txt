@@ -3,7 +3,7 @@
 ########################################################################
 
 # Defines program localization/language. Currently there are localizations for 'en' and 'pt-BR'.
-locale = pt-BR
+locale = en
 
 # Temporary directory for processing: "default" uses the system temporary folder.
 # Configure it on a folder free of antivirus, system indexing or restoring. Using a SSD disk is highly recommended.

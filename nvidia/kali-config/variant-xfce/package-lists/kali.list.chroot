@@ -57,6 +57,7 @@ openjdk-11-jdk
 openjfx
 zenity
 hwinfo
+gettext
 build-essential
 dkms
 linux-headers-amd64

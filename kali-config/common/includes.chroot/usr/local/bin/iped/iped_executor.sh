@@ -1,15 +1,18 @@
 #!/bin/bash
 #
 # iped_executor.sh
-# Script "motor" para execução do IPED.
-# (Versão com Arrays Nativos para proteção contra espaços e caminhos complexos)
+# "Engine" script for running IPED.
+# (Native Arrays version for protection against spaces and complex paths)
 #
+
+export TEXTDOMAIN="iped_executor"
+export TEXTDOMAINDIR="/usr/share/locale" # Adjust to your local path if testing
 
 source /home/kali/forensic_utils.sh
 
-# --- Constantes ---
+# --- Constants ---
 IPED_DIR="/usr/local/bin/iped"
-# Base do comando separada em Array mais abaixo
+# Base command separated in Array further below
 OUTPUT_DIR_DESKTOP="/home/kali/Desktop/IPED-CASO"
 OUTPUT_DIR_TRIAGE_BASE="/home/kali/Desktop/triage"
 OUTPUT_DIR_TRIAGE_CASE="$OUTPUT_DIR_TRIAGE_BASE/IPED-CASO"
@@ -17,33 +20,33 @@ COMMAND_LOG_FILE="/home/kali/Desktop/iped_comando_executado.log"
 MEDIA_DIR="/run/media"
 GPU_DETECT_SCRIPT="/usr/local/bin/gpu-detect.sh"
 
-# --- Variáveis de Ambientes Python (Venvs) ---
+# --- Python Environment Variables (Venvs) ---
 VENV_CUDA="/opt/venv-cuda/bin/activate"
 VENV_CUDA_LEGACY="/opt/venv-cuda-legacy/bin/activate"
 VENV_ROCM="/opt/venv-rocm/bin/activate"
 
-# --- Variáveis Globais ---
+# --- Global Variables ---
 CONTINUE_PROCESSING=false
 RECOVERED_CMD=""
 KALI_UID=1000
 KALI_GID=1000
-TARGET_ARRAY=() # Array global para armazenar os alvos com segurança
+TARGET_ARRAY=() # Global array to store targets securely
 
-# --- Funções de Lógica ---
+# --- Logic Functions ---
 
-# Função para lidar com BitLocker (Agora usa Arrays)
+# Function to handle BitLocker (Now uses Arrays)
 handle_bitlocker() {
     local disk_device=$1
     local root_system=$2
     local disk_basename=$(basename "$disk_device")
 
     if [[ "$disk_basename" != *"$root_system"* ]]; then
-        echo "Detectado bitlocker em $disk_device"
+        printf "$(gettext "Bitlocker detected on %s")\n" "$disk_device"
         sudo mkdir -p "/dislocker/bitlocker_$disk_basename"
 
         sudo dislocker -V "$disk_device" -- "/dislocker/bitlocker_$disk_basename" -r
         if sudo test -f "/dislocker/bitlocker_$disk_basename/dislocker-file"; then
-            echo "Bitlocker (sem senha) montado."
+            echo "$(gettext "Bitlocker (without password) mounted.")"
             sudo ln -sf "/dislocker/bitlocker_$disk_basename/dislocker-file" "/dislocker/dislocker-file_$disk_basename.dd"
             TARGET_ARRAY+=("-d" "/dislocker/dislocker-file_$disk_basename.dd")
         else
@@ -55,30 +58,36 @@ handle_bitlocker() {
                     previousline=$line
                 done <<< "$(sudo cryptsetup bitlkDump "$disk_device")"
 
-                bitlocker_pass=$(zenity --entry --title="Detectado BitLocker!" \
-                    --text="Partição criptografada em $disk_device.\nDigite a senha ou chave de recuperação:\n\n${BITLOCKER_INFO[0]}\n${BITLOCKER_INFO[1]}" \
-                    --entry-text "ChaveDeRecuperacao" --width=500)
+                zenity_title=$(gettext "BitLocker Detected!")
+                zenity_text=$(printf "$(gettext $'Encrypted partition on %s.\nEnter the password or recovery key:\n\n%s\n%s')" "$disk_device" "${BITLOCKER_INFO[0]}" "${BITLOCKER_INFO[1]}")
+                zenity_entry=$(gettext "RecoveryKey")
+
+                bitlocker_pass=$(zenity --entry --title="$zenity_title" \
+                    --text="$zenity_text" \
+                    --entry-text "$zenity_entry" --width=500 2>/dev/null)
 
                 if [ $? = 0 ]; then
                     sudo dislocker -V "$disk_device" -p"$bitlocker_pass" -- "/dislocker/bitlocker_$disk_basename" -r
                     if sudo test -f "/dislocker/bitlocker_$disk_basename/dislocker-file"; then
-                        echo "Bitlocker decifrado com chave de recuperação."
+                        echo "$(gettext "Bitlocker decrypted with recovery key.")"
                         sudo ln -sf "/dislocker/bitlocker_$disk_basename/dislocker-file" "/dislocker/dislocker-file_$disk_basename.dd"
                         TARGET_ARRAY+=("-d" "/dislocker/dislocker-file_$disk_basename.dd")
                         break
                     else
                         sudo dislocker -V "$disk_device" --user-password="$bitlocker_pass" -- "/dislocker/bitlocker_$disk_basename" -r
                         if sudo test -f "/dislocker/bitlocker_$disk_basename/dislocker-file"; then
-                            echo "Bitlocker decifrado com senha de usuário."
+                            echo "$(gettext "Bitlocker decrypted with user password.")"
                             sudo ln -sf "/dislocker/bitlocker_$disk_basename/dislocker-file" "/dislocker/dislocker-file_$disk_basename.dd"
                             TARGET_ARRAY+=("-d" "/dislocker/dislocker-file_$disk_basename.dd")
                             break
                         else
-                            zenity --error --title="Erro de Chave BitLocker!" --text="A chave ou senha fornecida não decifrou a unidade." --width=300 --timeout=10
+                            zenity_err_title=$(gettext "BitLocker Key Error!")
+                            zenity_err_text=$(gettext "The provided key or password did not decrypt the drive.")
+                            zenity --error --title="$zenity_err_title" --text="$zenity_err_text" --width=300 --timeout=10 2>/dev/null
                         fi
                     fi
                 else
-                    echo "Usuário cancelou a inserção de senha do Bitlocker."
+                    echo "$(gettext "User canceled Bitlocker password insertion.")"
                     break
                 fi
             done
@@ -86,16 +95,16 @@ handle_bitlocker() {
     fi
 }
 
-# Lógica para encontrar e montar partição de triagem
+# Logic to find and mount triage partition
 setup_output_dir() {
-    echo "Configurando diretório de saída..."
+    echo "$(gettext "Configuring output directory...")"
     
     local triage_part_device=$(get_triage_device)
     local TRIAGE_PARTITION_FOUND=false
     [ -n "$triage_part_device" ] && TRIAGE_PARTITION_FOUND=true
 
     if $TRIAGE_PARTITION_FOUND; then
-        echo "Dispositivo de destino identificado: $triage_part_device"
+        printf "$(gettext "Target device identified: %s")\n" "$triage_part_device"
         OUTPUT_DIR=$OUTPUT_DIR_TRIAGE_CASE
         DESKTOP_FILE="IPED-Caso-triage.desktop"
         
@@ -104,7 +113,7 @@ setup_output_dir() {
         fi
 
         if findmnt --mountpoint $OUTPUT_DIR_TRIAGE_BASE &> /dev/null; then
-             echo "Partição Triage já está montada."
+             echo "$(gettext "Triage partition is already mounted.")"
              if [ "$(stat -c '%u' "$OUTPUT_DIR_TRIAGE_BASE")" != "$KALI_UID" ]; then
                   sudo umount "$OUTPUT_DIR_TRIAGE_BASE" &> /dev/null
                   if ! sudo mount -o rw,uid=$KALI_UID,gid=$KALI_GID $triage_part_device $OUTPUT_DIR_TRIAGE_BASE; then
@@ -131,34 +140,34 @@ setup_output_dir() {
             
             sudo cp "$IPED_DIR/LocalConfig-triage.txt" "$IPED_DIR/LocalConfig.txt"
 
-            # --- INÍCIO DA LÓGICA DE BALANCEAMENTO DE THREADS/RAM ---
-            # Coleta o total de memória em KB e converte para MB
+            # --- START OF THREAD/RAM BALANCING LOGIC ---
+            # Collects total memory in KB and converts to MB
             local total_mem_kb=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
             local total_mem_mb=$((total_mem_kb / 1024))
             
-            # Calcula o número máximo de threads (1 thread para cada 1024 MB)
+            # Calculates maximum number of threads (1 thread for each 1024 MB)
             local max_threads=$((total_mem_mb / 1024))
             
-            # Garante que o sistema rodará com pelo menos 2 threads, mesmo em máquinas muito limitadas
+            # Ensures the system will run with at least 2 threads, even on very limited machines
             if [ "$max_threads" -lt 2 ]; then
                 max_threads=2
             fi
             
             local cpu_cores=$(nproc)
             
-            # Se a quantidade de núcleos lógicos for maior que a memória em GB, limita o IPED
+            # If the number of logical cores is greater than the memory in GB, limits IPED
             if [ "$cpu_cores" -gt "$max_threads" ]; then
-                echo "AVISO: Pouca memória por núcleo detectada (Cores: $cpu_cores, RAM: ${total_mem_mb}MB)."
-                echo "Ajustando numThreads de 'default' para '$max_threads' em LocalConfig.txt."
+                printf "$(gettext "WARNING: Low memory per core detected (Cores: %s, RAM: %sMB).")\n" "$cpu_cores" "$total_mem_mb"
+                printf "$(gettext "Adjusting numThreads from 'default' to '%s' in LocalConfig.txt.")\n" "$max_threads"
                 
-                # Altera a configuração do IPED no arquivo copiado
+                # Changes IPED configuration in the copied file
                 sudo sed -i "s/^numThreads = default/numThreads = $max_threads/" "$IPED_DIR/LocalConfig.txt"
             else
-                echo "Memória suficiente detectada (Cores: $cpu_cores, RAM: ${total_mem_mb}MB). Mantendo numThreads = default."
+                printf "$(gettext "Sufficient memory detected (Cores: %s, RAM: %sMB). Keeping numThreads = default.")\n" "$cpu_cores" "$total_mem_mb"
             fi
-            # --- FIM DA LÓGICA DE BALANCEAMENTO DE THREADS/RAM ---
+            # --- END OF THREAD/RAM BALANCING LOGIC ---
 
-            # Lógica de SWAP
+            # SWAP Logic
             if [ "$PROFILE" == "csam_triage" ] || [ "$PROFILE" == "triage" ]; then
                 if [ "$(cat /proc/swaps | wc -l)" -le 1 ]; then
                     local swap_file_path="$OUTPUT_DIR_TRIAGE_BASE/swapfile"
@@ -193,26 +202,34 @@ setup_output_dir() {
         fi 
 
     else 
-        echo "Nenhuma partição IPED-TRIAGE encontrada. Usando Desktop."
+        echo "$(gettext "No IPED-TRIAGE partition found. Using Desktop.")"
         OUTPUT_DIR=$OUTPUT_DIR_DESKTOP
         DESKTOP_FILE="IPED-Caso.desktop"
         LOG_FILE_PATH=""
         KEYWORD_FILE_PATH="$IPED_DIR/palavras-chave.txt"
 		
         if [ "$PROFILE" == "csam_triage" ] || [ "$PROFILE" == "triage" ]; then
-            echo "AVISO: Perfil '$PROFILE' sem partição Triage pode causar falta de memória."
-            zenity --warning --title="Partição Triage Não Encontrada" \
-                   --text="Para o perfil '$PROFILE', é altamente recomendável usar uma partição 'IPED-TRIAGE' para armazenar o caso e criar um arquivo de SWAP.\n\nContinuar pode causar instabilidade ou falta de memória." \
-                   --width=400
+            printf "$(gettext "WARNING: Profile '%s' without Triage partition may cause out of memory.")\n" "$PROFILE"
+            
+            zenity_warn_title=$(gettext "Triage Partition Not Found")
+            zenity_warn_text=$(printf "$(gettext $'For profile \'%s\', it is highly recommended to use an \'IPED-TRIAGE\' partition to store the case and create a SWAP file.\n\nContinuing may cause instability or lack of memory.')" "$PROFILE")
+            zenity --warning --title="$zenity_warn_title" \
+                   --text="$zenity_warn_text" \
+                   --width=400 2>/dev/null
         fi		
     fi
 
     if [ -d "$OUTPUT_DIR" ]; then
-        if zenity --question --title="Caso Existente" \
-            --text="Um caso já existe em:\n<b>$OUTPUT_DIR</b>\n\nO que deseja fazer?" \
-            --ok-label="Processar Novamente (Apagar)" \
-            --cancel-label="Continuar Anterior" \
-            --width=450;
+        zenity_q_title=$(gettext "Existing Case")
+        zenity_q_text=$(printf "$(gettext $'A case already exists at:\n<b>%s</b>\n\nWhat do you want to do?')" "$OUTPUT_DIR")
+        zenity_ok_lbl=$(gettext "Process Again (Delete)")
+        zenity_cancel_lbl=$(gettext "Continue Previous")
+
+        if zenity --question --title="$zenity_q_title" \
+            --text="$zenity_q_text" \
+            --ok-label="$zenity_ok_lbl" \
+            --cancel-label="$zenity_cancel_lbl" \
+            --width=450 2>/dev/null;
         then
             sudo rm -rf "$OUTPUT_DIR" || exit 6
             sudo mkdir -p "$OUTPUT_DIR"
@@ -249,16 +266,16 @@ setup_output_dir() {
     fi
 }
 
-# --- ATUALIZAÇÃO: Monta o array de alvos usando forensic_utils.sh ---
+# --- UPDATE: Builds the targets array using forensic_utils.sh ---
 build_targets() {
     TARGET_ARRAY=()
     local root_system=$(get_boot_disk_name)
 
     case $TARGET_MODE in
         "all_disks")
-            echo "Construindo alvos: Discos"
+            echo "$(gettext "Building targets: Disks")"
 
-            # 1. Discos Físicos
+            # 1. Physical Disks
             while read -r line ; do
                 local disk=$(echo "$line" | awk '{print $1}')
                 if [[ "$disk" != "$root_system" ]]; then
@@ -266,7 +283,7 @@ build_targets() {
                 fi
             done <<< "$(lsblk -lno NAME,TYPE | grep disk)"
 
-            # 2. LDM (RAID Windows)
+            # 2. LDM (Windows RAID)
             sudo ldmtool create all &> /dev/null
             while read -r line ; do
                 local disk=$(echo "$line" | awk '{print $1}')
@@ -294,7 +311,7 @@ build_targets() {
             ;;
 
         "mounted_files")
-            echo "Construindo alvos: Arquivos Montados"
+            echo "$(gettext "Building targets: Mounted Files")"
             if [ -f "/home/kali/mount_disks.sh" ]; then
                 /home/kali/mount_disks.sh
             fi
@@ -302,21 +319,22 @@ build_targets() {
             ;;
 
         "manual_dir")
-            echo "Construindo alvos: Seleção Manual"
+            echo "$(gettext "Building targets: Manual Selection")"
             if [ -z "$MANUAL_PATH" ]; then exit 5; fi
-            # O Array aceita espaços normalmente
+            # The Array accepts spaces normally
             TARGET_ARRAY+=("-d" "$MANUAL_PATH")
             ;;
     esac
 
     if [ ${#TARGET_ARRAY[@]} -eq 0 ]; then
-        zenity --error --text="Nenhum alvo de processamento foi determinado."
+        zenity_tgt_err=$(gettext "No processing target was determined.")
+        zenity --error --text="$zenity_tgt_err" 2>/dev/null
         exit 3
     fi
 }
 
 run_post_processing() {
-    echo "Iniciando pós-processamento..."
+    echo "$(gettext "Starting post-processing...")"
     cp "$IPED_DIR/Ferramenta_de_Pesquisa.sh" "$OUTPUT_DIR/"
     cp "$IPED_DIR/$DESKTOP_FILE" "/home/kali/Desktop/IPED-Caso.desktop"
     sudo chown kali:kali "/home/kali/Desktop/IPED-Caso.desktop" || true
@@ -327,7 +345,7 @@ run_post_processing() {
     fi
 }
 
-# --- Função Principal (Main) ---
+# --- Main Function ---
 
 if [ $# -eq 0 ]; then exit 1; fi
 
@@ -336,7 +354,7 @@ while [[ "$#" -gt 0 ]]; do
         --profile) SELECTED_PROFILE="$2"; shift ;;
         --target) TARGET_MODE="$2"; shift ;;
         --path) MANUAL_PATH="$2"; shift ;;
-        *) echo "Parâmetro desconhecido: $1"; exit 1 ;;
+        *) printf "$(gettext "Unknown parameter: %s")\n" "$1"; exit 1 ;;
     esac
     shift
 done
@@ -352,7 +370,7 @@ if ! $CONTINUE_PROCESSING; then
 fi
 
 # =========================================================
-# DETECÇÃO DE GPU E SELEÇÃO DE AMBIENTE PYTHON
+# GPU DETECTION AND PYTHON ENVIRONMENT SELECTION
 # =========================================================
 PYTHON_TARGET=""
 if [ -f "$GPU_DETECT_SCRIPT" ] && ! grep -q "nonvidia" /proc/cmdline; then
@@ -366,40 +384,41 @@ if [ -f "$GPU_DETECT_SCRIPT" ] && ! grep -q "nonvidia" /proc/cmdline; then
             CANDIDATO="$VENV_CUDA_LEGACY"
         fi
     elif [ "$VENDOR" = "AMD" ] && [ "$DRIVER" != "none" ]; then
-        # Só entra aqui se for uma GPU AMD discreta (ex: RX 6000+)
+        # Only enters here if it is a discrete AMD GPU (e.g., RX 6000+)
         CANDIDATO="$VENV_ROCM"
     fi
 
-    # Valida se o caminho do ambiente existe
+    # Validates if the environment path exists
     if [ -n "$CANDIDATO" ] && [ -f "$CANDIDATO" ]; then
         PYTHON_TARGET="$CANDIDATO"
-        echo "Hardware Detectado: $VENDOR ($ARCH) - Driver: $DRIVER"
-        echo "Ambiente Ativo: $PYTHON_TARGET"
+        printf "$(gettext "Hardware Detected: %s (%s) - Driver: %s")\n" "$VENDOR" "$ARCH" "$DRIVER"
+        printf "$(gettext "Active Environment: %s")\n" "$PYTHON_TARGET"
     else
-        echo "Modo CPU: Hardware detectado ($VENDOR $ARCH) não suporta aceleração estável."
+        printf "$(gettext "CPU Mode: Detected hardware (%s %s) does not support stable acceleration.")\n" "$VENDOR" "$ARCH"
     fi
 fi
 # =========================================================
     
 # =========================================================
-# 4. Construção Segura do Comando (ARRAYS + POSICIONAL)
+# 4. Secure Command Construction (ARRAYS + POSITIONAL)
 # =========================================================
 if $CONTINUE_PROCESSING; then
     FINAL_CMD=$RECOVERED_CMD
     echo "========================================================"
-    echo "COMANDO PARA CONTINUAR (Perfil Original '$PROFILE'):"
+    printf "$(gettext "COMMAND TO CONTINUE (Original Profile '%s'):")\n" "$PROFILE"
     echo "$FINAL_CMD"
     echo "========================================================"
     
-    # 5. Execução Continuação
+    # 5. Execution Continuation
     eval "$FINAL_CMD"
     
     if [ $? -ne 0 ]; then
-        zenity --error --text="Ocorreu um erro durante a continuação do processamento do IPED.\nVerifique o log neste terminal ou em $LOG_FILE_PATH" --width=500
+        zenity_cont_err=$(printf "$(gettext $'An error occurred while continuing IPED processing.\nCheck the log in this terminal or at %s')" "$LOG_FILE_PATH")
+        zenity --error --text="$zenity_cont_err" --width=500 2>/dev/null
         exit 4
     fi
 else
-    # Cria a base do comando como um Array
+    # Creates the command base as an Array
     IPED_CMD=("java" "--module-path" "/usr/share/openjfx/lib/" "--add-modules=javafx.swing,javafx.graphics,javafx.fxml,javafx.media,javafx.controls,javafx.web,javafx.base" "-jar" "iped.jar" "-o" "$OUTPUT_DIR" "-profile" "$PROFILE")
     
     if [ -n "$LOG_FILE_PATH" ]; then
@@ -409,60 +428,87 @@ else
         IPED_CMD+=("-l" "$KEYWORD_FILE_PATH")
     fi
     
-    # Anexa o array de alvos (nativamente imune a espaços)
+    # Appends the targets array (natively immune to spaces)
     IPED_CMD+=("${TARGET_ARRAY[@]}")
 
-    # Cria uma string legível para o LOG e para a futura continuação
+    # Creates a readable string for the LOG and for future continuation
     SAFE_ARGS=$(printf "%q " "${IPED_CMD[@]}")
     
     if [ -n "$PYTHON_TARGET" ]; then
-        # O TRUQUE: Passamos a lógica no bash -c, mas os dados vêm FORA das aspas.
-        # O '--' vira $0, o PYTHON_TARGET vira $1 e o resto vira $@
+        # THE TRICK: We pass the logic in bash -c, but the data comes OUTSIDE the quotes.
+        # The '--' becomes $0, PYTHON_TARGET becomes $1 and the rest becomes $@
         LOG_CMD="sudo bash -c 'source \"\$1\"; shift; exec \"\$@\"' -- $(printf "%q" "$PYTHON_TARGET") $SAFE_ARGS"
     else
         LOG_CMD="sudo $SAFE_ARGS"
     fi
 
     echo "========================================================"
-    echo "COMANDO FINAL A SER EXECUTADO:"
+    echo "$(gettext "FINAL COMMAND TO BE EXECUTED:")"
     echo "$LOG_CMD"
     echo "========================================================"
+	
+    # --- IPED LOCALIZATION (LANGUAGE) LOGIC ---
+    # Defines the IPED locale based on the system language ($LANG)
+    # Supported by IPED: 'en', 'pt-BR', 'it-IT', 'de-DE', 'es-AR' & 'fr-FR'
+    IPED_LOCALE="en"
+    if [[ "$LANG" == pt_BR* || "$LANG" == pt_PT* ]]; then
+        IPED_LOCALE="pt-BR"
+    elif [[ "$LANG" == it_IT* ]]; then
+        IPED_LOCALE="it-IT"
+    elif [[ "$LANG" == de_DE* ]]; then
+        IPED_LOCALE="de-DE"
+    elif [[ "$LANG" == es_AR* || "$LANG" == es_ES* || "$LANG" == es_* ]]; then
+        IPED_LOCALE="es-AR"
+    elif [[ "$LANG" == fr_FR* || "$LANG" == fr_* ]]; then
+        IPED_LOCALE="fr-FR"
+    fi
 
-    # LOG DO COMANDO
-    echo "Registrando comando em $COMMAND_LOG_FILE..."
+    printf "$(gettext "Configuring IPED locale to: %s")\n" "$IPED_LOCALE"
+    
+    # Replaces the line, even if commented, or appends to the end of the file
+    if grep -q "^[#]*[[:space:]]*locale[[:space:]]*=" "$IPED_DIR/LocalConfig.txt"; then
+        sudo sed -i "s/^[#]*[[:space:]]*locale[[:space:]]*=.*/locale = $IPED_LOCALE/" "$IPED_DIR/LocalConfig.txt"
+    else
+        echo "locale = $IPED_LOCALE" | sudo tee -a "$IPED_DIR/LocalConfig.txt" > /dev/null
+    fi
+    # ------------------------------------------	
+
+    # COMMAND LOG
+    printf "$(gettext "Registering command in %s...")\n" "$COMMAND_LOG_FILE"
     mkdir -p "$(dirname "$COMMAND_LOG_FILE")"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Executando: $LOG_CMD" >> "$COMMAND_LOG_FILE"
-    chown kali:kali "$COMMAND_LOG_FILE" || echo "Aviso: Falha ao mudar proprietário do arquivo de log."
+    printf "$(gettext "[%s] Executing: %s")\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$LOG_CMD" >> "$COMMAND_LOG_FILE"
+    chown kali:kali "$COMMAND_LOG_FILE" || echo "$(gettext "Warning: Failed to change log file owner.")"
 
-    echo "Iniciando IPED... Isso pode levar muito tempo."
+    echo "$(gettext "Starting IPED... This may take a long time.")"
 
     # =========================================================
-    # 5. Execução Principal (A MÁGICA ACONTECE AQUI)
+    # 5. Main Execution (THE MAGIC HAPPENS HERE)
     # =========================================================
     if [ -n "$PYTHON_TARGET" ]; then
-        # Executamos injetando o array nativamente. Sem "eval", logo sem erro de escape!
+        # We execute by injecting the array natively. No "eval", therefore no escaping error!
         sudo bash -c 'source "$1"; shift; exec "$@"' -- "$PYTHON_TARGET" "${IPED_CMD[@]}"
     else
         sudo "${IPED_CMD[@]}"
     fi
 
     if [ $? -ne 0 ]; then
-        echo "ERRO: O processamento do IPED falhou."
-        zenity --error --text="Ocorreu um erro durante o processamento do IPED.\nVerifique o log neste terminal ou em $LOG_FILE_PATH\n\nVocê pode tentar executar novamente e escolher 'Continuar Processamento Anterior'." --width=500
+        echo "$(gettext "ERROR: IPED processing failed.")"
+        zenity_main_err=$(printf "$(gettext $'An error occurred during IPED processing.\nCheck the log in this terminal or at %s\n\nYou can try running again and choose \'Continue Previous Processing\'.')" "$LOG_FILE_PATH")
+        zenity --error --text="$zenity_main_err" --width=500 2>/dev/null
         exit 4
     fi
 fi
 
-echo "Processamento IPED finalizado com sucesso."
+echo "$(gettext "IPED processing finished successfully.")"
 echo "---------------------------------------------"
 
-# 6. Pós-Processamento
+# 6. Post-Processing
 if ! $CONTINUE_PROCESSING; then
     run_post_processing
-    echo "Pós-processamento concluído."
+    echo "$(gettext "Post-processing completed.")"
 else
-    echo "Pós-processamento ignorado (modo continue)."
+    echo "$(gettext "Post-processing skipped (continue mode).")"
 fi
 
-echo "Caso disponível em: $OUTPUT_DIR"
+printf "$(gettext "Case available at: %s")\n" "$OUTPUT_DIR"
 echo "============================================="

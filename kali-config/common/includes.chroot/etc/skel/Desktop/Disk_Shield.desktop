@@ -1,8 +1,8 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Desbloqueio de Escrita
-Comment=Realiza o desbloqueio ou novo bloqueio de escrita nos discos
+Name=Disk Shield
+Comment=Allows or Blocks writing on disks
 Exec=python /home/kali/blockdev_gui_live_final.py
 Icon=/home/kali/Pictures/disk_shield_green.svg
 Path=/home/kali

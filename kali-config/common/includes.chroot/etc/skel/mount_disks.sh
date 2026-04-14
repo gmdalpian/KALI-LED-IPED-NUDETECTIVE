@@ -1,65 +1,68 @@
 #!/bin/bash
 
 # -----------------------------------------------------------------------------
-# Script Forense de Montagem Automática (Somente Leitura)
+# Forensic Automatic Mount Script (Read-Only)
 #
-# Propósito: Montar todos os dispositivos de bloco detectados (exceto o
-#            sistema Live USB) em modo somente leitura para análise forense.
+# Purpose: Mount all detected block devices (except the
+#          Live USB system) in read-only mode for forensic analysis.
 #
-# Funcionalidades:
-# - Monta partições, discos sem partição (superfloppy), LDM e BitLocker.
-# - Garante que todas as montagens sejam SOMENTE LEITURA.
-# - Impede a execução, acesso a dispositivos e SUID (noexec, nodev, nosuid).
-# - Impede a reprodução do journal (noload para ext4, ro para ntfs).
-# - Usa o driver 'ntfs' para todas as partições NTFS.
-# - Verifica se um dispositivo já está montado.
-# - Ignora o disco do sistema Live (USB, CD/DVD, etc.).
-# - Gera um relatório final com o Zenity (pode ser desabilitado)
-#   que inclui SUCESSOS e ERROS e desaparece após 10s.
+# Features:
+# - Mounts partitions, non-partitioned disks (superfloppy), LDM and BitLocker.
+# - Ensures all mounts are READ-ONLY.
+# - Prevents execution, device access and SUID (noexec, nodev, nosuid).
+# - Prevents journal playback (noload for ext4, ro for ntfs).
+# - Uses 'ntfs' driver for all NTFS partitions.
+# - Checks if a device is already mounted.
+# - Ignores the Live system disk (USB, CD/DVD, etc.).
+# - Generates a final report with Zenity (can be disabled)
+#   which includes SUCCESSES and ERRORS and disappears after 10s.
 #
-# Uso:
+# Usage:
 #   sudo ./mount_disks.sh
-#   sudo ./mount_disks.sh --no-report (para desabilitar o relatório Zenity)
+#   sudo ./mount_disks.sh --no-report (to disable Zenity report)
 # -----------------------------------------------------------------------------
+
+export TEXTDOMAIN="mount_disks"
+export TEXTDOMAINDIR="/usr/share/locale" # Adjust to your local path if testing
 
 source /home/kali/forensic_utils.sh
 
 MEDIA_DIR="/run/media"
 
-# --- Configuração Inicial ---
+# --- Initial Configuration ---
 
 SHOW_REPORT=true
 if [[ "$1" == "--no-report" ]]; then
   SHOW_REPORT=false
-  echo "Relatório Zenity no final foi desabilitado via parâmetro."
+  echo "$(gettext "Zenity report at the end was disabled via parameter.")"
 fi
 
-# Arquivo de log temporário para o relatório final
+# Temporary log file for final report
 MOUNT_LOG=$(mktemp)
-# Garante que o log seja limpo ao sair
+# Ensures the log is cleared on exit
 trap 'rm -f "$MOUNT_LOG"' EXIT
 
-# --- Pre-cache de Dispositivos BitLocker ---
-echo "Verificando dispositivos BitLocker antecipadamente..."
-# Armazena a lista de dispositivos BDE para evitar montagem na Seção 1
+# --- BitLocker Devices Pre-cache ---
+echo "$(gettext "Checking BitLocker devices in advance...")"
+# Stores the BDE devices list to avoid mounting in Section 1
 BITLOCKER_DEVICES=$(sudo dislocker-find)
 
-# Cria o diretório base para o dislocker (apenas uma vez)
+# Creates base directory for dislocker (only once)
 sudo mkdir -p /dislocker
 
-# --- Detecção Robusta do Sistema Live ---
+# --- Robust Live System Detection ---
 
-echo "Identificando o disco do sistema Live para excluí-lo..."
+echo "$(gettext "Identifying the Live system disk to exclude it...")"
 ROOT_DISK_NAME=$(get_boot_disk_name)
 
 if [[ -n "$ROOT_DISK_NAME" ]]; then
-    echo "Disco do sistema Live identificado: $ROOT_DISK_NAME. Este disco será ignorado."
+    printf "$(gettext "Live system disk identified: %s. This disk will be ignored.")\n" "$ROOT_DISK_NAME"
 else
-    echo "Aviso: Falha ao determinar disco de boot."
+    echo "$(gettext "Warning: Failed to determine boot disk.")"
     ROOT_DISK_NAME="null_failsafe"
 fi
 
-# --- Função Auxiliar de Montagem Forense ---
+# --- Forensic Mount Helper Function ---
 
 mount_forensic() {
     local device_path="$1"
@@ -67,26 +70,26 @@ mount_forensic() {
     local device_name
     device_name=$(basename "$device_path")
 
-    # 1. Ignorar o disco do sistema Live
+    # 1. Ignore the Live system disk
     if [[ -n "$ROOT_DISK_NAME" && "$device_name" == *"$ROOT_DISK_NAME"* ]]; then
         return
     fi
 
-    # 2. Verificar se já está montado
+    # 2. Check if already mounted
     if findmnt --mountpoint "$mount_point" &> /dev/null; then
-        echo "$device_path já está montado em $mount_point. Ignorando."
+        printf "$(gettext "%s is already mounted at %s. Ignoring.")\n" "$device_path" "$mount_point"
         return
     fi
 
-    # 3. VERIFICAÇÃO DE BITLOCKER (MELHORIA)
-    # Verifica se o dispositivo está na lista BDE. Se estiver, pula,
-    # pois será tratado pela Seção 3.
+    # 3. BITLOCKER CHECK (IMPROVEMENT)
+    # Checks if device is in the BDE list. If so, skips,
+    # because it will be handled by Section 3.
     if echo "$BITLOCKER_DEVICES" | grep -q "^$device_path$"; then
-        echo "Ignorando $device_path (detectado BitLocker, será tratado na Seção 3)."
+        printf "$(gettext "Ignoring %s (BitLocker detected, will be handled in Section 3).")\n" "$device_path"
         return
     fi
 
-    # 4. Detectar tipo de sistema de arquivos
+    # 4. Detect file system type
     local fs_type_output
     fs_type_output=$(lsblk -no FSTYPE "$device_path")
     
@@ -94,22 +97,22 @@ mount_forensic() {
     line_count=$(echo "$fs_type_output" | wc -l)
 
     if [[ $line_count -gt 1 ]]; then
-        echo "Ignorando $device_path (dispositivo contêiner com partições)."
+        printf "$(gettext "Ignoring %s (container device with partitions).")\n" "$device_path"
         return
     fi
     
     local fs_type="$fs_type_output"
 
     if [[ -z "$fs_type" ]]; then
-        echo "Ignorando $device_path (sem sistema de arquivos detectável)."
+        printf "$(gettext "Ignoring %s (no detectable file system).")\n" "$device_path"
         return
     fi
     
-    # Opções de base, cruciais para segurança e forense
+    # Base options, crucial for security and forensics
     local mount_options="ro,noexec,nodev,nosuid"
-    local type_options="" # Opções de tipo de FS, ex: -t ntfs
+    local type_options="" # FS type options, e.g.: -t ntfs
 
-    # 5. Adicionar opções específicas de journal e tipo
+    # 5. Add specific journal and type options
     if [[ "$fs_type" == "ntfs" ]]; then
         type_options="-t ntfs"
         
@@ -120,23 +123,23 @@ mount_forensic() {
         mount_options="$mount_options,norecovery"
     fi
 
-    # 6. Criar ponto de montagem e montar
-    echo "Tentando montar $device_path (Tipo: $fs_type) em $mount_point..."
+    # 6. Create mount point and mount
+    printf "$(gettext "Trying to mount %s (Type: %s) at %s...")\n" "$device_path" "$fs_type" "$mount_point"
     sudo mkdir -p "$mount_point"
     
     if sudo mount -o "$mount_options" $type_options "$device_path" "$mount_point"; then
-        echo "Sucesso: $device_path montado em $mount_point"
-        echo "SUCESSO: $device_path -> $mount_point (Tipo: ${fs_type:-desconhecido}, Opções: $mount_options)" >> "$MOUNT_LOG"
+        printf "$(gettext "Success: %s mounted at %s")\n" "$device_path" "$mount_point"
+        printf "$(gettext "SUCCESS: %s -> %s (Type: %s, Options: %s)")\n" "$device_path" "$mount_point" "${fs_type:-unknown}" "$mount_options" >> "$MOUNT_LOG"
     else
-        echo "Erro: Falha ao montar $device_path em $mount_point."
-        echo "ERRO: Falha ao montar $device_path em $mount_point." >> "$MOUNT_LOG"
+        printf "$(gettext "Error: Failed to mount %s at %s.")\n" "$device_path" "$mount_point"
+        printf "$(gettext "ERROR: Failed to mount %s at %s.")\n" "$device_path" "$mount_point" >> "$MOUNT_LOG"
         sudo rmdir "$mount_point" &> /dev/null
     fi
 }
 
-# --- 1. Montagem de Partições Padrão ---
+# --- 1. Standard Partitions Mount ---
 
-echo "Montando partições padrão (somente leitura)..."
+echo "$(gettext "Mounting standard partitions (read-only)...")"
 while read -r line; do
     disk_name=$(echo "$line" | awk '{print $1}') # e.g., sda, sda1, sdb, sr0
     if [[ -n "$disk_name" ]]; then
@@ -145,9 +148,9 @@ while read -r line; do
 done <<< "$(lsblk -lno NAME,TYPE | grep -E 'part|disk|rom')"
 
 
-# --- 2. Montagem de LDM (RAID do Windows) ---
+# --- 2. LDM Mount (Windows RAID) ---
 
-echo "Tentando montar volumes LDM (RAID do Windows)..."
+echo "$(gettext "Trying to mount LDM volumes (Windows RAID)...")"
 sudo ldmtool create all > /dev/null 2>&1
 sleep 2 
 
@@ -159,14 +162,14 @@ while read -r line; do
 done <<< "$(lsblk -lno NAME,TYPE | grep 'dm')"
 
 
-# --- 3. Montagem de Partições BitLocker ---
+# --- 3. BitLocker Partitions Mount ---
 
-echo "Verificando partições BitLocker (da lista pré-carregada)..."
-# MELHORIA: Itera sobre a variável $BITLOCKER_DEVICES em vez de chamar dislocker-find novamente
+echo "$(gettext "Checking BitLocker partitions (from pre-loaded list)...")"
+# IMPROVEMENT: Iterates over $BITLOCKER_DEVICES instead of calling dislocker-find again
 while read -r bde_device_path; do
     if [[ -n "$bde_device_path" ]]; then
         
-        # CORREÇÃO: Removido 'local' das declarações de variáveis
+        # FIX: Removed 'local' from variable declarations
         disk_name=$(basename "$bde_device_path") 
         decrypted_mount_point="$MEDIA_DIR/decrypted_$disk_name"
         dislocker_path="/dislocker/bitlocker_$disk_name"
@@ -174,35 +177,35 @@ while read -r bde_device_path; do
         bde_mount_options="loop,ro,noexec,nodev,nosuid"
 
         if [[ -n "$ROOT_DISK_NAME" && "$disk_name" == *"$ROOT_DISK_NAME"* ]]; then
-            echo "Ignorando BitLocker em $bde_device_path (parte do sistema Live)."
+            printf "$(gettext "Ignoring BitLocker on %s (part of Live system).")\n" "$bde_device_path"
             continue
         fi
 
         if findmnt --mountpoint "$decrypted_mount_point" &> /dev/null; then
-            echo "BitLocker de $bde_device_path já está montado em $decrypted_mount_point. Ignorando."
+            printf "$(gettext "BitLocker of %s is already mounted at %s. Ignoring.")\n" "$bde_device_path" "$decrypted_mount_point"
             continue
         fi
 
-        echo "Detectada partição BitLocker em $bde_device_path"
+        printf "$(gettext "BitLocker partition detected on %s")\n" "$bde_device_path"
         sudo mkdir -p "$dislocker_path"
         sudo mkdir -p "$decrypted_mount_point"
         
         sudo dislocker -V "$bde_device_path" -- "$dislocker_path" -r
 
         if sudo test -f "$dislocker_file"; then
-            # Sucesso (suspenso)
-            echo "BitLocker em $bde_device_path está suspenso. Montando..."
+            # Success (suspended)
+            printf "$(gettext "BitLocker on %s is suspended. Mounting...")\n" "$bde_device_path"
             if sudo mount -o $bde_mount_options "$dislocker_file" "$decrypted_mount_point" -t ntfs; then
-                echo "Sucesso: BitLocker de $bde_device_path montado em $decrypted_mount_point"
-                echo "SUCESSO: $bde_device_path (BitLocker) -> $decrypted_mount_point (Tipo: ntfs, Opções: $bde_mount_options)" >> "$MOUNT_LOG"
+                printf "$(gettext "Success: BitLocker of %s mounted at %s")\n" "$bde_device_path" "$decrypted_mount_point"
+                printf "$(gettext "SUCCESS: %s (BitLocker) -> %s (Type: ntfs, Options: %s)")\n" "$bde_device_path" "$decrypted_mount_point" "$bde_mount_options" >> "$MOUNT_LOG"
             else
-                echo "Erro: Falha ao montar o arquivo dislocker-file de $bde_device_path."
-                echo "ERRO: Falha ao montar o arquivo dislocker-file de $bde_device_path (suspenso)." >> "$MOUNT_LOG"
+                printf "$(gettext "Error: Failed to mount dislocker-file for %s.")\n" "$bde_device_path"
+                printf "$(gettext "ERROR: Failed to mount dislocker-file for %s (suspended).")\n" "$bde_device_path" >> "$MOUNT_LOG"
                 sudo rmdir "$decrypted_mount_point" "$dislocker_path" &> /dev/null
             fi
         else
-            # 4. Precisa de chave
-            echo "BitLocker em $bde_device_path requer uma chave."
+            # 4. Needs key
+            printf "$(gettext "BitLocker on %s requires a key.")\n" "$bde_device_path"
             
             while true; do
                 BITLOCKER_INFO=('', '')
@@ -215,69 +218,81 @@ while read -r bde_device_path; do
                     fi
                 done <<< "$(sudo cryptsetup bitlkDump "$bde_device_path")"
 
-                bitlocker_pass=$(zenity --entry --title="Detectado BitLocker!" --text="Detectou-se uma particao criptografada com bitlocker em $bde_device_path, porem nao foi possivel decripta-la automaticamente. \nEste script tentara montar as demais particoes. \nCaso se tenha a chave de recuperacao ou a senha de acesso digite-a abaixo: \n${BITLOCKER_INFO[0]} \n${BITLOCKER_INFO[1]}" --entry-text "ChaveDeRecuperacao" --width=500)
+                # Pre-formatting for zenity texts to keep command clean
+                zenity_title=$(gettext "BitLocker Detected!")
+                zenity_text_format=$(gettext $'An encrypted bitlocker partition was detected on %s, but could not be decrypted automatically.\nThis script will try to mount the other partitions.\nIf you have the recovery key or password, enter it below:\n%s\n%s')
+                zenity_text=$(printf "$zenity_text_format" "$bde_device_path" "${BITLOCKER_INFO[0]}" "${BITLOCKER_INFO[1]}")
+                zenity_entry=$(gettext "RecoveryKey")
+
+                bitlocker_pass=$(zenity --entry --title="$zenity_title" --text="$zenity_text" --entry-text "$zenity_entry" --width=500 2>/dev/null)
                 
                 if [ $? = 0 ]; then
-                    # Tenta com Chave de Recuperação
+                    # Tries with Recovery Key
                     sudo dislocker -V "$bde_device_path" -p"$bitlocker_pass" -- "$dislocker_path" -r
                     if sudo test -f "$dislocker_file"; then
-                        echo "Chave de recuperação aceita. Montando..."
+                        echo "$(gettext "Recovery key accepted. Mounting...")"
                         if sudo mount -o $bde_mount_options "$dislocker_file" "$decrypted_mount_point" -t ntfs; then
-                            echo "Sucesso: BitLocker de $bde_device_path montado em $decrypted_mount_point"
-                            echo "SUCESSO: $bde_device_path (BitLocker) -> $decrypted_mount_point (Tipo: ntfs, Opções: $bde_mount_options)" >> "$MOUNT_LOG"
+                            printf "$(gettext "Success: BitLocker of %s mounted at %s")\n" "$bde_device_path" "$decrypted_mount_point"
+                            printf "$(gettext "SUCCESS: %s (BitLocker) -> %s (Type: ntfs, Options: %s)")\n" "$bde_device_path" "$decrypted_mount_point" "$bde_mount_options" >> "$MOUNT_LOG"
                         else
-                            echo "Erro: Falha ao montar o arquivo dislocker-file de $bde_device_path."
-                            echo "ERRO: Falha ao montar o arquivo dislocker-file de $bde_device_path (com Chave)." >> "$MOUNT_LOG"
+                            printf "$(gettext "Error: Failed to mount dislocker-file for %s.")\n" "$bde_device_path"
+                            printf "$(gettext "ERROR: Failed to mount dislocker-file for %s (with Key).")\n" "$bde_device_path" >> "$MOUNT_LOG"
                         fi
                         break
                     else
-                        # Tenta com Senha de Usuário
+                        # Tries with User Password
                         sudo dislocker -V "$bde_device_path" --user-password="$bitlocker_pass" -- "$dislocker_path" -r
                         if sudo test -f "$dislocker_file"; then
-                            echo "Senha de usuário aceita. Montando..."
+                            echo "$(gettext "User password accepted. Mounting...")"
                             if sudo mount -o $bde_mount_options "$dislocker_file" "$decrypted_mount_point" -t ntfs; then
-                                echo "Sucesso: BitLocker de $bde_device_path montado em $decrypted_mount_point"
-                                echo "SUCESSO: $bde_device_path (BitLocker) -> $decrypted_mount_point (Tipo: ntfs, Opções: $bde_mount_options)" >> "$MOUNT_LOG"
+                                printf "$(gettext "Success: BitLocker of %s mounted at %s")\n" "$bde_device_path" "$decrypted_mount_point"
+                                printf "$(gettext "SUCCESS: %s (BitLocker) -> %s (Type: ntfs, Options: %s)")\n" "$bde_device_path" "$decrypted_mount_point" "$bde_mount_options" >> "$MOUNT_LOG"
                             else
-                                echo "Erro: Falha ao montar o arquivo dislocker-file de $bde_device_path."
-                                echo "ERRO: Falha ao montar o arquivo dislocker-file de $bde_device_path (com Senha)." >> "$MOUNT_LOG"
+                                printf "$(gettext "Error: Failed to mount dislocker-file for %s.")\n" "$bde_device_path"
+                                printf "$(gettext "ERROR: Failed to mount dislocker-file for %s (with Password).")\n" "$bde_device_path" >> "$MOUNT_LOG"
                             fi
                             break
                         else
-                            zenity --error --title="Erro de Chave BitLocker!" --text="A chave ou senha fornecida nao decifrou a unidade." --width=300 --timeout=20
-                            echo "ERRO: Chave/Senha inválida fornecida para $bde_device_path." >> "$MOUNT_LOG"
+                            zenity_err_title=$(gettext "BitLocker Key Error!")
+                            zenity_err_text=$(gettext "The provided key or password did not decrypt the drive.")
+                            zenity --error --title="$zenity_err_title" --text="$zenity_err_text" --width=300 --timeout=20 2>/dev/null
+                            printf "$(gettext "ERROR: Invalid Key/Password provided for %s.")\n" "$bde_device_path" >> "$MOUNT_LOG"
                         fi
                     fi
                 else
-                    echo "Montagem do BitLocker em $bde_device_path cancelada pelo usuário."
-                    echo "AVISO: Montagem do BitLocker em $bde_device_path cancelada pelo usuário." >> "$MOUNT_LOG"
+                    printf "$(gettext "BitLocker mount on %s canceled by user.")\n" "$bde_device_path"
+                    printf "$(gettext "WARNING: BitLocker mount on %s canceled by user.")\n" "$bde_device_path" >> "$MOUNT_LOG"
                     sudo rmdir "$decrypted_mount_point" "$dislocker_path" &> /dev/null
                     break
                 fi
             done
         fi
     fi
-done <<< "$BITLOCKER_DEVICES" # MELHORIA: Usa a variável pré-carregada
+done <<< "$BITLOCKER_DEVICES" # IMPROVEMENT: Uses pre-loaded variable
 
 
-# --- 4. Relatório Final ---
+# --- 4. Final Report ---
 
-echo "Processo de montagem concluído."
+echo "$(gettext "Mounting process completed.")"
 
 if [ "$SHOW_REPORT" = true ]; then
     REPORT_CONTENT=$(cat "$MOUNT_LOG")
     if [ -z "$REPORT_CONTENT" ]; then
-        zenity --info --title="Relatório de Montagem" --text="Nenhuma atividade de montagem (sucesso ou erro) foi registrada." --width=400 --timeout=10
+        zenity_info_title=$(gettext "Mount Report")
+        zenity_info_text=$(gettext "No mount activity (success or error) was recorded.")
+        zenity --info --title="$zenity_info_title" --text="$zenity_info_text" --width=400 --timeout=10 2>/dev/null
     else
-        echo -e "Relatório de Montagem (Modo Forense Seguro):\n\n$REPORT_CONTENT" | zenity --text-info --title="Relatório de Montagem Forense" --width=700 --height=400 --font="Monospace" --timeout=10
+        zenity_report_title=$(gettext "Forensic Mount Report")
+        zenity_report_header=$(gettext "Mount Report (Secure Forensic Mode):")
+        echo -e "${zenity_report_header}\n\n$REPORT_CONTENT" | zenity --text-info --title="$zenity_report_title" --width=700 --height=400 --font="Monospace" --timeout=10 2>/dev/null
     fi
 else
-    echo "Relatório Zenity desabilitado. Saída do console:"
+    echo "$(gettext "Zenity report disabled. Console output:")"
     if [ -s "$MOUNT_LOG" ]; then
         cat "$MOUNT_LOG"
     else
-        echo "Nenhuma atividade de montagem (sucesso ou erro) foi registrada."
+        echo "$(gettext "No mount activity (success or error) was recorded.")"
     fi
 fi
 
-# A limpeza do $MOUNT_LOG é tratada pelo 'trap' no início.
+# The $MOUNT_LOG cleanup is handled by the 'trap' at the beginning.
