@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Language / Idioma
+Comment=System Language Selector
+Exec=python /home/kali/change_language_gui.py
+Icon=preferences-desktop-locale
+Terminal=false
+Categories=Settings;System;
