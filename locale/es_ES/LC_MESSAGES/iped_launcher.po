@@ -1,0 +1,195 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: iped_launcher 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-10-25 10:00-0300\n"
+"PO-Revision-Date: 2026-04-15 11:41-0300\n"
+"Last-Translator: \n"
+"Language-Team: es_ES\n"
+"Language: es_ES\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "CSAM-Triage"
+msgstr "CSAM-Triage"
+
+msgid "Profile optimized for detecting <b>CSAM - Child Sexual Abuse Material</b>. Includes AI models using neural networks for detecting unknown files and hash checking for known files, if the IPED hash file is present in the IPED-TRIAGE volume (see user manual). Processes only images and videos, excluding all other files from the case."
+msgstr "Perfil optimizado para la detección de <b>CSAM - Material de Abuso Sexual Infantil</b>. Incluye modelos de IA que utilizan redes neuronales para detectar archivos desconocidos y verificación de hash para archivos conocidos, si el archivo de hashes de IPED está presente en el volumen IPED-TRIAGE (véase el manual de usuario). Procesa únicamente imágenes y vídeos, excluyendo el resto de los archivos del caso."
+
+msgid "Triage (Documents, emails, etc.)"
+msgstr "Triage (Documentos, correos electrónicos, etc.)"
+
+msgid "Indexes the content of files from some document formats (office, pdf, html, emails, internet history, etc.) in common user directories. Image and video parsers are disabled. Some folders, such as those containing system files, are not included in the case. Thus, you can do some indexed searches in triage scenarios. The time to complete processing is very unpredictable, highly dependent on the volume of user data."
+msgstr "Indexa el contenido de archivos de algunos formatos de documento (office, pdf, html, correos electrónicos, historial de internet, etc.) en directorios comunes del usuario. Los analizadores (parsers) de imágenes y vídeos están desactivados. Algunas carpetas, como las que contienen archivos del sistema, no se incluyen en el caso. De este modo, puede realizar algunas búsquedas indexadas en escenarios de triage. El tiempo para completar el procesamiento es muy impredecible y depende en gran medida del volumen de datos del usuario."
+
+msgid "FastMode (Quick)"
+msgstr "FastMode (Rápido)"
+
+msgid "Fastest processing mode to preview data. All features that need file content access are disabled, such as hash calculation, signature analysis, indexing, carving, regex scanning, and thumbnail generation. Basically, it runs an ls on the file system tree. But files are still categorized based on extension, you can preview file content, browse the file system tree, use the image gallery and apply filters based on any file metadata like name, path, size, or MAC times."
+msgstr "Modo de procesamiento más rápido para previsualizar datos. Todas las funciones que requieren acceso al contenido del archivo están desactivadas, como el cálculo de hash, el análisis de firmas, la indexación, el carving, el escaneo de expresiones regulares y la generación de miniaturas. Básicamente, ejecuta un 'ls' en el árbol del sistema de archivos. Sin embargo, los archivos siguen categorizándose según su extensión; puede previsualizar el contenido del archivo, navegar por el árbol del sistema de archivos, usar la galería de imágenes y aplicar filtros basados en cualquier metadato del archivo, como nombre, ruta, tamaño o tiempos MAC."
+
+msgid "Mounted Files (Recommended)"
+msgstr "Archivos montados (Recomendado)"
+
+msgid "<b>Processes only visible files (Recommended)</b>. Analyzes all files in mounted directories (e.g., /run/media/). It is the fastest and safest option for most triages."
+msgstr "<b>Procesa solo los archivos visibles (Recomendado)</b>. Analiza todos los archivos en los directorios montados (ej. /run/media/). Es la opción más rápida y segura para la mayoría de los triages."
+
+msgid "Disks (Full/Slow)"
+msgstr "Discos (Completo/Lento)"
+
+msgid "<b>Processes all devices</b>: physical disks, partitions, LDM volumes (RAID), VSS (Shadow Copies), and BitLocker. It is the most complete method, but slower."
+msgstr "<b>Procesa todos los dispositivos</b>: discos físicos, particiones, volúmenes LDM (RAID), VSS (Shadow Copies) y BitLocker. Es el método más completo, pero más lento."
+
+msgid "Select Directory/Image"
+msgstr "Seleccionar directorio/imagen"
+
+msgid "<b>Allows manually choosing</b> a specific directory or a single forensic image file (like .E01, .dd, .vmdk) or cell phone extraction (.ufdr) to be processed."
+msgstr "<b>Permite elegir manualmente</b> un directorio específico o un único archivo de imagen forense (como .E01, .dd, .vmdk) o una extracción de teléfono móvil (.ufdr) para procesarlo."
+
+msgid "Forensic Images (*.E01 *.Ex01 *.e01 *.ex01 *.dd *.raw *.img *.vmdk *.vhd *.AFF *.ufdr *.UFDR);;All Files (*)"
+msgstr "Imágenes forenses (*.E01 *.Ex01 *.e01 *.ex01 *.dd *.raw *.img *.vmdk *.vhd *.AFF *.ufdr *.UFDR);;Todos los archivos (*)"
+
+msgid "IPED Forensic Processing Wizard"
+msgstr "Asistente de procesamiento forense IPED"
+
+msgid "Warning: Icon 'analisador.png' not found. Using default icon."
+msgstr "Advertencia: No se encontró el icono 'analisador.png'. Usando el icono predeterminado."
+
+msgid "Step 1 of 2: Select Processing Mode"
+msgstr "Paso 1 de 2: Seleccionar el modo de procesamiento"
+
+msgid "View System Information"
+msgstr "Ver información del sistema"
+
+msgid "Open User Manual"
+msgstr "Abrir manual de usuario"
+
+msgid "Exit"
+msgstr "Salir"
+
+msgid "Back"
+msgstr "Atrás"
+
+msgid "Next"
+msgstr "Siguiente"
+
+msgid " Start Processing"
+msgstr " Iniciar procesamiento"
+
+msgid " Select Directory"
+msgstr " Seleccionar directorio"
+
+msgid " Select Image"
+msgstr " Seleccionar imagen"
+
+msgid "Selected: {}"
+msgstr "Seleccionado: {}"
+
+msgid "Error Opening Manual"
+msgstr "Error al abrir el manual"
+
+msgid "Could not find the manual file at:\n{}"
+msgstr "No se pudo encontrar el archivo del manual en:\n{}"
+
+msgid "Could not open the manual.\nCheck if 'xdg-open' is installed.\n\nError: {}"
+msgstr "No se pudo abrir el manual.\nCompruebe si 'xdg-open' está instalado.\n\nError: {}"
+
+msgid "System Information"
+msgstr "Información del sistema"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Failed to gather system information: {}"
+msgstr "Fallo al recopilar la información del sistema: {}"
+
+msgid "TIMEOUT: Command '{}' took too long."
+msgstr "TIEMPO AGOTADO: El comando '{}' tardó demasiado."
+
+msgid "ERROR ({code}): Executing '{cmd}': {err}"
+msgstr "ERROR ({code}): Al ejecutar '{cmd}': {err}"
+
+msgid "ERROR: Command '{}' not found."
+msgstr "ERROR: Comando '{}' no encontrado."
+
+msgid "Unexpected ERROR: {}"
+msgstr "ERROR inesperado: {}"
+
+msgid "Not available"
+msgstr "No disponible"
+
+msgid "CPU: {}"
+msgstr "CPU: {}"
+
+msgid "Error parsing RAM: {}"
+msgstr "Error al analizar la RAM: {}"
+
+msgid "Total RAM Memory: {}"
+msgstr "Memoria RAM total: {}"
+
+msgid "\nDisks and Partitions (Ignoring boot disk):"
+msgstr "\nDiscos y particiones (Ignorando disco de arranque):"
+
+msgid "(Ignoring boot disk: {})"
+msgstr "(Ignorando disco de arranque: {})"
+
+msgid "No disks detected (besides boot disk)."
+msgstr "No se detectaron discos (además del disco de arranque)."
+
+msgid "\nBitLocker Partitions:"
+msgstr "\nParticiones BitLocker:"
+
+msgid "No BitLocker partitions found."
+msgstr "No se encontraron particiones BitLocker."
+
+msgid "Step 2 of 2: Select Processing Target"
+msgstr "Paso 2 de 2: Seleccionar el objetivo de procesamiento"
+
+msgid "Mount script already executed in this session."
+msgstr "El script de montaje ya se ejecutó en esta sesión."
+
+msgid "Warning: Mount script not found at {}"
+msgstr "Advertencia: No se encontró el script de montaje en {}"
+
+msgid "Executing mount_disks.sh..."
+msgstr "Ejecutando mount_disks.sh..."
+
+msgid "Executing script to mount disks and check BitLocker..."
+msgstr "Ejecutando script para montar discos y comprobar BitLocker..."
+
+msgid "Script finished. This terminal will close automatically in 5 seconds (or press Enter to close now)."
+msgstr "Script finalizado. Este terminal se cerrará automáticamente en 5 segundos (o presione Intro para cerrar ahora)."
+
+msgid "Failed to execute the mount script.\nError: {}"
+msgstr "Fallo al ejecutar el script de montaje.\nError: {}"
+
+msgid "Command 'x-terminal-emulator' not found.\nCheck if a terminal is set as default."
+msgstr "Comando 'x-terminal-emulator' no encontrado.\nCompruebe si hay un terminal configurado por defecto."
+
+msgid "Unexpected error calling mount script:\n{}"
+msgstr "Error inesperado al llamar al script de montaje:\n{}"
+
+msgid "Select Target Directory"
+msgstr "Seleccionar directorio de destino"
+
+msgid "Select Image File"
+msgstr "Seleccionar archivo de imagen"
+
+msgid "Validation Error"
+msgstr "Error de validación"
+
+msgid "No path selected for manual mode.\nPlease select a directory or file."
+msgstr "No se ha seleccionado ninguna ruta para el modo manual.\nPor favor, seleccione un directorio o archivo."
+
+msgid "Processing finished. This terminal will close automatically in 10 seconds (or press Enter to close now)."
+msgstr "Procesamiento finalizado. Este terminal se cerrará automáticamente en 10 segundos (o presione Intro para cerrar ahora)."
+
+msgid "Executing: {}"
+msgstr "Ejecutando: {}"
+
+msgid "Error Starting"
+msgstr "Error al iniciar"
+
+msgid "Could not start terminal.\nCheck if 'x-terminal-emulator' is configured.\n\nError: {}"
+msgstr "No se pudo iniciar el terminal.\nCompruebe si 'x-terminal-emulator' está configurado.\n\nError: {}"

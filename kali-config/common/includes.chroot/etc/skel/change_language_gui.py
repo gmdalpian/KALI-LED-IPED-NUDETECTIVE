@@ -27,8 +27,8 @@ ICON_SYSTEM = "preferences-desktop-locale"
 
 IDIOMAS = {
     "en_US.UTF-8": {"nome": _("English (US)"), "icone": "us.svg"},
-    "pt_BR.UTF-8": {"nome": _("Português (Brasil)"), "icone": "br.svg"}
-#    "es_ES.UTF-8": {"nome": _("Español"), "icone": "es.svg"}
+    "pt_BR.UTF-8": {"nome": _("Português (Brasil)"), "icone": "br.svg"},
+    "es_ES.UTF-8": {"nome": _("Español"), "icone": "es.svg"}
 }
 
 class LanguageSelector(QWidget):

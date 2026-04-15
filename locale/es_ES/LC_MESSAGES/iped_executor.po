@@ -1,0 +1,153 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: iped_executor 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-10-25 10:00-0300\n"
+"PO-Revision-Date: 2026-04-15 11:41-0300\n"
+"Last-Translator: \n"
+"Language-Team: es_ES\n"
+"Language: es_ES\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Bitlocker detected on %s"
+msgstr "BitLocker detectado en %s"
+
+msgid "Bitlocker (without password) mounted."
+msgstr "BitLocker (sin contraseña) montado."
+
+msgid "BitLocker Detected!"
+msgstr "¡BitLocker detectado!"
+
+msgid "Encrypted partition on %s.\nEnter the password or recovery key:\n\n%s\n%s"
+msgstr "Partición cifrada en %s.\nIntroduzca la contraseña o la clave de recuperación:\n\n%s\n%s"
+
+msgid "RecoveryKey"
+msgstr "ClaveDeRecuperacion"
+
+msgid "Bitlocker decrypted with recovery key."
+msgstr "BitLocker descifrado con clave de recuperación."
+
+msgid "Bitlocker decrypted with user password."
+msgstr "BitLocker descifrado con contraseña de usuario."
+
+msgid "BitLocker Key Error!"
+msgstr "¡Error en la clave de BitLocker!"
+
+msgid "The provided key or password did not decrypt the drive."
+msgstr "La clave o contraseña proporcionada no descifró la unidad."
+
+msgid "User canceled Bitlocker password insertion."
+msgstr "El usuario canceló la introducción de la contraseña de BitLocker."
+
+msgid "Configuring output directory..."
+msgstr "Configurando el directorio de salida..."
+
+msgid "Target device identified: %s"
+msgstr "Dispositivo de destino identificado: %s"
+
+msgid "Triage partition is already mounted."
+msgstr "La partición Triage ya está montada."
+
+msgid "WARNING: Low memory per core detected (Cores: %s, RAM: %sMB)."
+msgstr "ADVERTENCIA: Se detectó poca memoria por núcleo (Núcleos: %s, RAM: %sMB)."
+
+msgid "Adjusting numThreads from 'default' to '%s' in LocalConfig.txt."
+msgstr "Ajustando numThreads de 'default' a '%s' en LocalConfig.txt."
+
+msgid "Sufficient memory detected (Cores: %s, RAM: %sMB). Keeping numThreads = default."
+msgstr "Memoria suficiente detectada (Núcleos: %s, RAM: %sMB). Manteniendo numThreads = default."
+
+msgid "No IPED-TRIAGE partition found. Using Desktop."
+msgstr "No se encontró la partición IPED-TRIAGE. Usando el Escritorio."
+
+msgid "WARNING: Profile '%s' without Triage partition may cause out of memory."
+msgstr "ADVERTENCIA: El perfil '%s' sin partición Triage puede causar falta de memoria."
+
+msgid "Triage Partition Not Found"
+msgstr "Partición Triage no encontrada"
+
+msgid "For profile '%s', it is highly recommended to use an 'IPED-TRIAGE' partition to store the case and create a SWAP file.\n\nContinuing may cause instability or lack of memory."
+msgstr "Para el perfil '%s', se recomienda encarecidamente utilizar una partición 'IPED-TRIAGE' para almacenar el caso y crear un archivo SWAP.\n\nContinuar puede causar inestabilidad o falta de memoria."
+
+msgid "Existing Case"
+msgstr "Caso existente"
+
+msgid "A case already exists at:\n<b>%s</b>\n\nWhat do you want to do?"
+msgstr "Ya existe un caso en:\n<b>%s</b>\n\n¿Qué desea hacer?"
+
+msgid "Process Again (Delete)"
+msgstr "Procesar nuevamente (Eliminar)"
+
+msgid "Continue Previous"
+msgstr "Continuar anterior"
+
+msgid "Building targets: Disks"
+msgstr "Construyendo objetivos: Discos"
+
+msgid "Building targets: Mounted Files"
+msgstr "Construyendo objetivos: Archivos montados"
+
+msgid "Building targets: Manual Selection"
+msgstr "Construyendo objetivos: Selección manual"
+
+msgid "No processing target was determined."
+msgstr "No se determinó ningún objetivo de procesamiento."
+
+msgid "Starting post-processing..."
+msgstr "Iniciando posprocesamiento..."
+
+msgid "Unknown parameter: %s"
+msgstr "Parámetro desconocido: %s"
+
+msgid "Hardware Detected: %s (%s) - Driver: %s"
+msgstr "Hardware detectado: %s (%s) - Controlador: %s"
+
+msgid "Active Environment: %s"
+msgstr "Entorno activo: %s"
+
+msgid "CPU Mode: Detected hardware (%s %s) does not support stable acceleration."
+msgstr "Modo CPU: El hardware detectado (%s %s) no soporta aceleración estable."
+
+msgid "COMMAND TO CONTINUE (Original Profile '%s'):"
+msgstr "COMANDO PARA CONTINUAR (Perfil original '%s'):"
+
+msgid "An error occurred while continuing IPED processing.\nCheck the log in this terminal or at %s"
+msgstr "Ocurrió un error al continuar el procesamiento de IPED.\nCompruebe el registro en este terminal o en %s"
+
+msgid "FINAL COMMAND TO BE EXECUTED:"
+msgstr "COMANDO FINAL A EJECUTAR:"
+
+msgid "Configuring IPED locale to: %s"
+msgstr "Configurando el idioma de IPED a: %s"
+
+msgid "Registering command in %s..."
+msgstr "Registrando comando en %s..."
+
+msgid "[%s] Executing: %s"
+msgstr "[%s] Ejecutando: %s"
+
+msgid "Warning: Failed to change log file owner."
+msgstr "Advertencia: Fallo al cambiar el propietario del archivo de registro."
+
+msgid "Starting IPED... This may take a long time."
+msgstr "Iniciando IPED... Esto puede llevar mucho tiempo."
+
+msgid "ERROR: IPED processing failed."
+msgstr "ERROR: El procesamiento de IPED falló."
+
+msgid "An error occurred during IPED processing.\nCheck the log in this terminal or at %s\n\nYou can try running again and choose 'Continue Previous Processing'."
+msgstr "Ocurrió un error durante el procesamiento de IPED.\nCompruebe el registro en este terminal o en %s\n\nPuede intentar ejecutar de nuevo y elegir 'Continuar procesamiento anterior'."
+
+msgid "IPED processing finished successfully."
+msgstr "Procesamiento de IPED finalizado con éxito."
+
+msgid "Post-processing completed."
+msgstr "Posprocesamiento completado."
+
+msgid "Post-processing skipped (continue mode)."
+msgstr "Posprocesamiento omitido (modo continuar)."
+
+msgid "Case available at: %s"
+msgstr "Caso disponible en: %s"

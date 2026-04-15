@@ -1,0 +1,39 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: cria_arquivo_memoria_swap 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-10-25 10:00-0300\n"
+"PO-Revision-Date: 2026-04-15 11:41-0300\n"
+"Last-Translator: \n"
+"Language-Team: es_ES\n"
+"Language: es_ES\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Could not locate triage partition"
+msgstr "No se pudo localizar la partición triage"
+
+msgid "Error creating memory!"
+msgstr "¡Error al crear la memoria!"
+
+msgid "In order to create the virtual memory file, the disk containing Kali must have a partition named IPED-TRIAGE, in exFAT format."
+msgstr "Para crear el archivo de memoria virtual, el disco que contiene Kali debe tener una partición denominada IPED-TRIAGE, en formato exFAT."
+
+msgid "Located triage partition at /dev/%s"
+msgstr "Se localizó la partición triage en /dev/%s"
+
+msgid "Select Swap Memory Size"
+msgstr "Seleccione el tamaño de la memoria Swap"
+
+msgid "Select the desired size for the memory file to be created, in GB.\nA minimum of 4 is recommended."
+msgstr "Seleccione el tamaño deseado para el archivo de memoria a crear, en GB.\nSe recomienda un mínimo de 4."
+
+msgid "Creating swap virtual memory file..."
+msgstr "Creando archivo de memoria virtual swap..."
+
+msgid "Memory file enabled!"
+msgstr "¡Archivo de memoria habilitado!"
+
+msgid "Error creating memory file!"
+msgstr "¡Error al crear el archivo de memoria!"

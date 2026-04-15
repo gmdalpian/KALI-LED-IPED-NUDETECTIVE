@@ -1,0 +1,144 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: mount_disks 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-10-25 10:00-0300\n"
+"PO-Revision-Date: 2026-04-15 11:41-0300\n"
+"Last-Translator: \n"
+"Language-Team: es_ES\n"
+"Language: es_ES\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Zenity report at the end was disabled via parameter."
+msgstr "El informe de Zenity al final fue deshabilitado mediante parámetro."
+
+msgid "Checking BitLocker devices in advance..."
+msgstr "Comprobando dispositivos BitLocker con antelación..."
+
+msgid "Identifying the Live system disk to exclude it..."
+msgstr "Identificando el disco del sistema Live para excluirlo..."
+
+msgid "Live system disk identified: %s. This disk will be ignored."
+msgstr "Disco del sistema Live identificado: %s. Este disco será ignorado."
+
+msgid "Warning: Failed to determine boot disk."
+msgstr "Advertencia: Fallo al determinar el disco de arranque."
+
+msgid "%s is already mounted at %s. Ignoring."
+msgstr "%s ya está montado en %s. Ignorando."
+
+msgid "Ignoring %s (BitLocker detected, will be handled in Section 3)."
+msgstr "Ignorando %s (BitLocker detectado, se gestionará en la Sección 3)."
+
+msgid "Ignoring %s (container device with partitions)."
+msgstr "Ignorando %s (dispositivo contenedor con particiones)."
+
+msgid "Ignoring %s (no detectable file system)."
+msgstr "Ignorando %s (sin sistema de archivos detectable)."
+
+msgid "Trying to mount %s (Type: %s) at %s..."
+msgstr "Intentando montar %s (Tipo: %s) en %s..."
+
+msgid "Success: %s mounted at %s"
+msgstr "Éxito: %s montado en %s"
+
+msgid "SUCCESS: %s -> %s (Type: %s, Options: %s)"
+msgstr "ÉXITO: %s -> %s (Tipo: %s, Opciones: %s)"
+
+msgid "Error: Failed to mount %s at %s."
+msgstr "Error: Fallo al montar %s en %s."
+
+msgid "ERROR: Failed to mount %s at %s."
+msgstr "ERROR: Fallo al montar %s en %s."
+
+msgid "Mounting standard partitions (read-only)..."
+msgstr "Montando particiones estándar (solo lectura)..."
+
+msgid "Trying to mount LDM volumes (Windows RAID)..."
+msgstr "Intentando montar volúmenes LDM (RAID de Windows)..."
+
+msgid "Checking BitLocker partitions (from pre-loaded list)..."
+msgstr "Comprobando particiones BitLocker (de la lista precargada)..."
+
+msgid "Ignoring BitLocker on %s (part of Live system)."
+msgstr "Ignorando BitLocker en %s (parte del sistema Live)."
+
+msgid "BitLocker of %s is already mounted at %s. Ignoring."
+msgstr "El BitLocker de %s ya está montado en %s. Ignorando."
+
+msgid "BitLocker partition detected on %s"
+msgstr "Partición BitLocker detectada en %s"
+
+msgid "BitLocker on %s is suspended. Mounting..."
+msgstr "El BitLocker en %s está suspendido. Montando..."
+
+msgid "Success: BitLocker of %s mounted at %s"
+msgstr "Éxito: BitLocker de %s montado en %s"
+
+msgid "SUCCESS: %s (BitLocker) -> %s (Type: ntfs, Options: %s)"
+msgstr "ÉXITO: %s (BitLocker) -> %s (Tipo: ntfs, Opciones: %s)"
+
+msgid "Error: Failed to mount dislocker-file for %s."
+msgstr "Error: Fallo al montar el archivo dislocker para %s."
+
+msgid "ERROR: Failed to mount dislocker-file for %s (suspended)."
+msgstr "ERROR: Fallo al montar el archivo dislocker para %s (suspendido)."
+
+msgid "BitLocker on %s requires a key."
+msgstr "El BitLocker en %s requiere una clave."
+
+msgid "BitLocker Detected!"
+msgstr "¡BitLocker detectado!"
+
+msgid "An encrypted bitlocker partition was detected on %s, but could not be decrypted automatically.\nThis script will try to mount the other partitions.\nIf you have the recovery key or password, enter it below:\n%s\n%s"
+msgstr "Se detectó una partición cifrada con BitLocker en %s, pero no se pudo descifrar automáticamente.\nEste script intentará montar las demás particiones.\nSi tiene la clave de recuperación o la contraseña, introdúzcala a continuación:\n%s\n%s"
+
+msgid "RecoveryKey"
+msgstr "ClaveDeRecuperacion"
+
+msgid "Recovery key accepted. Mounting..."
+msgstr "Clave de recuperación aceptada. Montando..."
+
+msgid "ERROR: Failed to mount dislocker-file for %s (with Key)."
+msgstr "ERROR: Fallo al montar el archivo dislocker para %s (con Clave)."
+
+msgid "User password accepted. Mounting..."
+msgstr "Contraseña de usuario aceptada. Montando..."
+
+msgid "ERROR: Failed to mount dislocker-file for %s (with Password)."
+msgstr "ERROR: Fallo al montar el archivo dislocker para %s (con Contraseña)."
+
+msgid "BitLocker Key Error!"
+msgstr "¡Error en la clave de BitLocker!"
+
+msgid "The provided key or password did not decrypt the drive."
+msgstr "La clave o contraseña proporcionada no descifró la unidad."
+
+msgid "ERROR: Invalid Key/Password provided for %s."
+msgstr "ERROR: Clave/Contraseña no válida proporcionada para %s."
+
+msgid "BitLocker mount on %s canceled by user."
+msgstr "Montaje de BitLocker en %s cancelado por el usuario."
+
+msgid "WARNING: BitLocker mount on %s canceled by user."
+msgstr "ADVERTENCIA: Montaje de BitLocker en %s cancelado por el usuario."
+
+msgid "Mounting process completed."
+msgstr "Proceso de montaje completado."
+
+msgid "Mount Report"
+msgstr "Informe de montaje"
+
+msgid "No mount activity (success or error) was recorded."
+msgstr "No se registró ninguna actividad de montaje (éxito o error)."
+
+msgid "Forensic Mount Report"
+msgstr "Informe de montaje forense"
+
+msgid "Mount Report (Secure Forensic Mode):"
+msgstr "Informe de montaje (Modo forense seguro):"
+
+msgid "Zenity report disabled. Console output:"
+msgstr "Informe de Zenity deshabilitado. Salida de la consola:"

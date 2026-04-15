@@ -1,0 +1,90 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: blockdev_gui 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-10-25 10:00-0300\n"
+"PO-Revision-Date: 2026-04-15 11:41-0300\n"
+"Last-Translator: \n"
+"Language-Team: es_ES\n"
+"Language: es_ES\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Block Device Lock Manager - LIVE MODE"
+msgstr "Administrador de bloqueo de dispositivos de bloques - MODO LIVE"
+
+msgid "ERROR: Utility {} not found."
+msgstr "ERROR: Utilidad {} no encontrada."
+
+msgid "Utility identified the boot disk as: {}"
+msgstr "La utilidad identificó el disco de arranque como: {}"
+
+msgid "Failed to execute forensic_utils.sh: {}"
+msgstr "Fallo al ejecutar forensic_utils.sh: {}"
+
+msgid "Unexpected error identifying boot: {}"
+msgstr "Error inesperado al identificar el arranque: {}"
+
+msgid "Boot Device (Excluded): /dev/{}"
+msgstr "Dispositivo de arranque (Excluido): /dev/{}"
+
+msgid "Could not identify the Boot device."
+msgstr "No se pudo identificar el dispositivo de arranque."
+
+msgid "Available Block Devices (Green: RO / Red: RW):"
+msgstr "Dispositivos de bloques disponibles (Verde: RO / Rojo: RW):"
+
+msgid "Refresh List"
+msgstr "Actualizar lista"
+
+msgid "Block Write (RO)"
+msgstr "Bloquear escritura (RO)"
+
+msgid "Allow Write (RW)"
+msgstr "Permitir escritura (RW)"
+
+msgid "Allow Write"
+msgstr "Permitir escritura"
+
+msgid "Block Write"
+msgstr "Bloquear escritura"
+
+msgid "Unlabeled"
+msgstr "Sin etiqueta"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Listing failed: {}"
+msgstr "Fallo en la lista: {}"
+
+msgid "BLOCKED (RO)"
+msgstr "BLOQUEADO (RO)"
+
+msgid "UNBLOCKED (RW)"
+msgstr "DESBLOQUEADO (RW)"
+
+msgid "/dev/{name} | Status: {status}\n   Size: {size} | Partition: {partition}"
+msgstr "/dev/{name} | Estado: {status}\n   Tamaño: {size} | Partición: {partition}"
+
+msgid "Success: /dev/{} unmounted."
+msgstr "Éxito: /dev/{} desmontado."
+
+msgid "Ignored: /dev/{} was not mounted."
+msgstr "Ignorado: /dev/{} no estaba montado."
+
+msgid "Failed on /dev/{}: {}"
+msgstr "Fallo en /dev/{}: {}"
+
+msgid "Do you want to {action} on /dev/{device}?"
+msgstr "¿Desea {action} en /dev/{device}?"
+
+msgid "\n--- Unmounting ---"
+msgstr "\n--- Desmontando ---"
+
+msgid "\n--- Permission ---"
+msgstr "\n--- Permisos ---"
+
+msgid "Success: /dev/{}"
+msgstr "Éxito: /dev/{}"
