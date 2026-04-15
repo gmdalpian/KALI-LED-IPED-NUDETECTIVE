@@ -93,6 +93,36 @@ do_copy() {
         check_status "Customização da versão global"
     fi
 
+    # --- BLOCO DE TRADUÇÃO: Compilação de .po para .mo ---
+    echo '--- [AÇÃO: LOCALE] Compilando arquivos de tradução (.po para .mo) ---'
+    LOCALE_SRC="${EXTERNAL_DISK}/locale"
+    
+    if [ -d "$LOCALE_SRC" ]; then
+        # Busca todos os arquivos .po na estrutura
+        find "$LOCALE_SRC" -type f -name "*.po" | while read -r po_file; do
+            # Identifica se o arquivo está dentro de um diretório LC_MESSAGES
+            msg_dir=$(dirname "$po_file")
+            if [ "$(basename "$msg_dir")" == "LC_MESSAGES" ]; then
+                # Extrai o nome da linguagem (ex: pt_BR) que é o diretório pai do LC_MESSAGES
+                lang=$(basename "$(dirname "$msg_dir")")
+                
+                # Define e cria o diretório de destino na estrutura de chroot do Kali
+                dest_dir="${BASE_DIR}/kali-config/common/includes.chroot/usr/share/locale/$lang/LC_MESSAGES"
+                mkdir -p "$dest_dir"
+                
+                # Nome do arquivo de saída .mo
+                filename=$(basename "$po_file" .po)
+                
+                # Compila o .po para .mo
+                msgfmt -o "$dest_dir/$filename.mo" "$po_file"
+                check_status "Compilação do locale $lang ($filename.mo)"
+            fi
+        done
+        echo "Traduções compiladas e integradas na chroot com sucesso."
+    else
+        echo "Aviso: Diretório de origens de tradução ($LOCALE_SRC) não encontrado. Ignorando compilação de idiomas."
+    fi
+
     # 4. Sincronização Final para a pasta de build
     chmod -R +x ${BASE_DIR}/kali-config
     cp -Rf ${BASE_DIR}/kali-config/* ${BASE_DIR}/kali-live/kali-config/
