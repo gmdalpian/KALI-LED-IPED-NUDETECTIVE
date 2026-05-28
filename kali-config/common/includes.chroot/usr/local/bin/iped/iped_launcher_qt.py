@@ -93,7 +93,7 @@ class App(QMainWindow):
         self.selected_target = "mounted_files"  # Padrão
 
         # --- Variável para armazenar o caminho manual ---
-        self.manual_selected_path = "/media" # Pré-preenchido
+        self.manual_selected_path = "/run/media" # Pré-preenchido
 
         # --- VARIÁVEL DE CONTROLE PARA O SCRIPT DE MONTAGEM ---
         self.mount_script_run = False
@@ -739,7 +739,7 @@ class App(QMainWindow):
         # 1. Validação
         path = self.manual_selected_path
 
-        if self.selected_target == "manual_dir" and (not path or path == "/media"):
+        if self.selected_target == "manual_dir" and (not path or path == "/run/media"):
             QMessageBox.critical(self, _("Validation Error"),
                                  _("No path selected for manual mode.\nPlease select a directory or file."))
             return
