@@ -727,7 +727,7 @@ class App(QMainWindow):
         if not self._run_mount_script_if_needed():
             return
 
-        path, _ = QFileDialog.getOpenFileName(
+        path, _filter = QFileDialog.getOpenFileName(
             self,
             _("Select Image File"),
             self.manual_selected_path,
