@@ -2,7 +2,13 @@
 Version=1.0
 Type=Application
 Name=Nudetective
-Comment=Nudetective
+Name[en_US]=Nudetective
+Name[es_ES]=Nudetective
+Name[pt_BR]=Nudetective
+Comment=Runs the Nudetective nudity detector
+Comment[en_US]=Runs the Nudetective nudity detector
+Comment[es_ES]=Ejecuta el detector de desnudez Nudetective
+Comment[pt_BR]=Executa o detector de nudez Nudetective
 Exec=/usr/local/bin/NuDetective/nudetective.sh
 Icon=/home/kali/Pictures/nudetective.jpg
 Path=/usr/local/bin/NuDetective/

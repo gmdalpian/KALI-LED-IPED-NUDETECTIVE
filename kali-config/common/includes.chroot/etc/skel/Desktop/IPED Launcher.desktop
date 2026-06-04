@@ -2,7 +2,13 @@
 Version=1.0
 Type=Application
 Name=IPED Launcher
-Comment=Permite a selação de perfis e alvos a serem processados no IPED
+Name[en_US]=IPED Launcher
+Name[es_ES]=Lanzador IPED
+Name[pt_BR]=IPED Launcher
+Comment=Allows the selection of profiles and targets to be processed in IPED
+Comment[en_US]=Allows the selection of profiles and targets to be processed in IPED
+Comment[es_ES]=Permite la selección de perfiles y objetivos a procesar en IPED
+Comment[pt_BR]=Permite a seleção de perfis e alvos a serem processados no IPED
 Exec=python /usr/local/bin/iped/iped_launcher_qt.py
 Icon=/home/kali/Pictures/analisador.png
 Path=/usr/local/bin/iped/

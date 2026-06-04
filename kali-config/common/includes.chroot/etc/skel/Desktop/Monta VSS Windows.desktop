@@ -1,8 +1,14 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Mounts VSS Windows
-Comment=Mounts Windows Volume Shadow Copys (VSS) if detected
+Name=Mount VSS
+Name[en_US]=Mount VSS
+Name[es_ES]=Montar VSS
+Name[pt_BR]=Monta VSS
+Comment=Mounts Windows Shadow Volumes (VSS) if detected
+Comment[en_US]=Mounts Windows Shadow Volumes (VSS) if detected
+Comment[es_ES]=Monta Volúmenes de Sombra de Windows (VSS) si se detectan
+Comment[pt_BR]=Monta Volumes de Sombra do Windows (VSS) caso detectado
 Exec=/home/kali/mount_windows_shadows.sh
 Icon=drive-multidisk
 Path=/home/kali

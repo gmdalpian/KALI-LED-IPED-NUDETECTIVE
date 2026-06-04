@@ -1,8 +1,14 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=LED - Escolher Midia
-Comment=Executa o LED solicitando a pasta a ser vasculhada
+Name=LED - Choose Media
+Name[en_US]=LED - Choose Media
+Name[es_ES]=LED - Elegir Medio
+Name[pt_BR]=LED - Escolher Mídia
+Comment=Runs LED requesting the folder to be scanned
+Comment[en_US]=Runs LED requesting the folder to be scanned
+Comment[es_ES]=Ejecuta LED solicitando la carpeta a escanear
+Comment[pt_BR]=Executa o LED solicitando a pasta a ser vasculhada
 Exec=/usr/local/bin/LED/start-led_selecionar.sh
 Icon=/home/kali/Pictures/led.png
 Path=/usr/local/bin/LED

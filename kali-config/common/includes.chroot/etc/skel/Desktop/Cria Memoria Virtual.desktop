@@ -2,7 +2,13 @@
 Version=1.0
 Type=Application
 Name=Virtual Memory
-Comment=Enables virtual memory (swap)
+Name[en_US]=Virtual Memory
+Name[es_ES]=Memoria Virtual
+Name[pt_BR]=Memória Virtual
+Comment=Enables virtual memory in Linux to prevent out-of-memory errors (swap)
+Comment[en_US]=Enables virtual memory in Linux to prevent out-of-memory errors (swap)
+Comment[es_ES]=Habilita la memoria virtual en Linux para evitar el desbordamiento de memoria (swap)
+Comment[pt_BR]=Habilita a memória virtual no Linux para evitar estouro de memória (swap)
 Exec=/home/kali/cria_arquivo_memoria_swap.sh
 Icon=drive-multidisk
 Path=/home/kali

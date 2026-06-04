@@ -1,8 +1,14 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Language / Idioma
-Comment=System Language Selector
+Name=Select Language
+Name[en_US]=Select Language
+Name[es_ES]=Seleccionar Idioma
+Name[pt_BR]=Selecionar Idioma
+Comment=System language selector
+Comment[en_US]=System language selector
+Comment[es_ES]=Selector de idioma para el sistema
+Comment[pt_BR]=Seletor de idiomas para o sistema
 Exec=python /home/kali/change_language_gui.py
 Icon=preferences-desktop-locale
 Terminal=false

@@ -1,8 +1,14 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=LED - Montar e Vasculhar
-Comment=Executa o LED nos discos detectados
+Name=LED - Mount and Scan
+Name[en_US]=LED - Mount and Scan
+Name[es_ES]=LED - Montar y Escanear
+Name[pt_BR]=LED - Montar e Vasculhar
+Comment=Runs LED (Digital Evidence Finder) on detected disks
+Comment[en_US]=Runs LED (Digital Evidence Finder) on detected disks
+Comment[es_ES]=Ejecuta LED (Localizador de Evidencias Digitales) en los discos detectados
+Comment[pt_BR]=Executa o LED (Localizador de Evidências Digitais) nos discos detectados
 Exec=/usr/local/bin/LED/start-led.sh
 Icon=/home/kali/Pictures/led.png
 Path=/usr/local/bin/LED
