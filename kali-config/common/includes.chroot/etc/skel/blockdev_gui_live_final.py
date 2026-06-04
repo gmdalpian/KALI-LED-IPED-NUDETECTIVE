@@ -122,12 +122,31 @@ class BlockDeviceManager(QWidget):
     def _update_desktop_icon(self, is_secure):
         icon_file = ICON_GREEN if is_secure else ICON_RED
         icon_path = ICON_DIR + icon_file
-        next_action_name = _("Allow Write") if is_secure else _("Block Write")
+        
+        # Base text (fallback) in English, used as a key in gettext
+        default_name = "Allow Write" if is_secure else "Block Write"
+        
+        # Dynamically translated text for the current language
+        translated_name = _(default_name)
+        
+        # Captures the current language code (e.g., extracts 'pt_BR' from 'pt_BR.UTF-8')
+        lang_env = os.environ.get('LANG', 'en_US.UTF-8')
+        current_lang = lang_env.split('.')[0]
+        
         try:
-            subprocess.run(["sudo", "sed", "-i", f"s|^Icon=.*|Icon={icon_path}|", DESKTOP_FILE_PATH], check=True)
-            subprocess.run(["sudo", "sed", "-i", f"s|^Name=.*|Name={next_action_name}|", DESKTOP_FILE_PATH], check=True)
+            # 1. Updates the icon path
+            subprocess.run(["sudo", "sed", "-i", rf"s|^Icon=.*|Icon={icon_path}|", DESKTOP_FILE_PATH], check=True)
+            
+            # 2. Updates the default Name key (keeping the English fallback)
+            subprocess.run(["sudo", "sed", "-i", rf"s|^Name=.*|Name={default_name}|", DESKTOP_FILE_PATH], check=True)
+            
+            # 3. Updates only the key corresponding to the current language (e.g., Name[pt_BR]=Permitir Escrita)
+            subprocess.run(["sudo", "sed", "-i", rf"s|^Name\[{current_lang}\]=.*|Name[{current_lang}]={translated_name}|", DESKTOP_FILE_PATH], check=True)
+            
+            # Revalidates the shortcut in the XFCE environment
             subprocess.run(["/bin/bash", "/etc/profile.d/trust_desktop_icons.sh"], check=True)
-        except: pass
+        except Exception as e: 
+            print(_("Error updating desktop shortcut: {}").format(e))
 
     def _get_ro_status(self, device_name):
         try:
