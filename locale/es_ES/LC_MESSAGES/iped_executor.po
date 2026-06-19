@@ -151,3 +151,24 @@ msgstr "Posprocesamiento omitido (modo continuar)."
 
 msgid "Case available at: %s"
 msgstr "Caso disponible en: %s"
+
+msgid "Action"
+msgstr "Acción"
+
+msgid "Continue previous processing"
+msgstr "Continuar el procesamiento anterior"
+
+msgid "Create a new case (archive the current one)"
+msgstr "Crear un nuevo caso (archivar el actual)"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Operation canceled by the user."
+msgstr "Operación cancelada por el usuario."
+
+msgid "Archiving previous case to:"
+msgstr "Archivando caso anterior en:"
+
+msgid "Select"
+msgstr "Seleccionar"

@@ -222,24 +222,74 @@ setup_output_dir() {
     if [ -d "$OUTPUT_DIR" ]; then
         zenity_q_title=$(gettext "Existing Case")
         zenity_q_text=$(printf "$(gettext $'A case already exists at:\n<b>%s</b>\n\nWhat do you want to do?')" "$OUTPUT_DIR")
-        zenity_ok_lbl=$(gettext "Process Again (Delete)")
-        zenity_cancel_lbl=$(gettext "Continue Previous")
 
-        if zenity --question --title="$zenity_q_title" \
+        # Using zenity --radiolist to present exclusive options with OK/Cancel buttons
+        USER_CHOICE=$(zenity --list --radiolist \
+            --title="$zenity_q_title" \
             --text="$zenity_q_text" \
-            --ok-label="$zenity_ok_lbl" \
-            --cancel-label="$zenity_cancel_lbl" \
-            --width=450 2>/dev/null;
-        then
-            sudo rm -rf "$OUTPUT_DIR" || exit 6
+            --column="$(gettext 'Select')" --column="ID" --column="$(gettext 'Action')" \
+            --hide-column=2 --print-column=2 \
+            FALSE "1" "$(gettext 'Continue previous processing')" \
+            TRUE "2" "$(gettext 'Create a new case (archive the current one)')" \
+            --width=450 --height=220 2>/dev/null)
+
+        # If clicked Cancel, closed the window, or an error occurred
+        if [ $? -ne 0 ] || [ -z "$USER_CHOICE" ]; then
+            echo "$(gettext 'Operation canceled by the user.')"
+            exit 0
+        fi
+
+        if [ "$USER_CHOICE" == "2" ]; then
+            # Option 2: Create a new case (rename/archive the old one)
+            local counter=1
+            local counter_str
+            local new_dir_name
+            
+            # Find the next available number
+            while true; do
+                counter_str=$(printf "%02d" "$counter")
+                new_dir_name="${OUTPUT_DIR}-${counter_str}"
+                if [ ! -d "$new_dir_name" ]; then
+                    break
+                fi
+                ((counter++))
+            done
+
+            echo "$(gettext 'Archiving previous case to:') $new_dir_name"
+            sudo mv "$OUTPUT_DIR" "$new_dir_name"
+
+            # Update the Desktop shortcut to point to the archived case
+            local desk_shortcut="/home/kali/Desktop/IPED-Caso.desktop"
+            local new_desk_shortcut="/home/kali/Desktop/IPED-Caso-${counter_str}.desktop"
+
+            if [ -f "$desk_shortcut" ]; then
+                sudo mv "$desk_shortcut" "$new_desk_shortcut"
+                # Replace old paths with new ones in the renamed shortcut using '|' as delimiter in sed
+                sudo sed -i "s|${OUTPUT_DIR}|${new_dir_name}|g" "$new_desk_shortcut"
+                
+                # Get the current system locale (e.g., pt_BR, en_US, es_ES)
+                local current_locale=$(echo "$LANG" | cut -d. -f1)
+
+                # Update the default Name property inside the shortcut to reflect the numbering
+                sudo sed -i "s|^Name=.*|&-${counter_str}|" "$new_desk_shortcut"
+                
+                # Update the localized Name property dynamically based on the current system locale
+                sudo sed -i "s|^Name\[.*\]=.*|&-${counter_str}|" "$new_desk_shortcut"
+            fi
+
+            # Prepare the new empty main directory
             sudo mkdir -p "$OUTPUT_DIR"
             sudo chown $KALI_UID:$KALI_GID "$OUTPUT_DIR"
             CONTINUE_PROCESSING=false
-        else
+
+		elif [ "$USER_CHOICE" == "1" ]; then
+            # Option 1: Continue previous processing (Original Logic Maintained)
             CONTINUE_PROCESSING=true
             if [ -f "$COMMAND_LOG_FILE" ]; then
                  local escaped_output_dir=$(sed 's#[&/\]#\\&#g' <<<"$OUTPUT_DIR")
-                 local original_cmd=$(grep "$escaped_output_dir" "$COMMAND_LOG_FILE" | tail -n 1 | sed 's/^\[.*\] Executando: //')
+                 
+                 # Regex updated to extract the command regardless of the log language
+                 local original_cmd=$(grep "$escaped_output_dir" "$COMMAND_LOG_FILE" | tail -n 1 | sed -E 's/^\[[^]]+\] [^:]+: //')
 
                  if [ -z "$original_cmd" ]; then exit 7; fi
                  
@@ -503,12 +553,8 @@ echo "$(gettext "IPED processing finished successfully.")"
 echo "---------------------------------------------"
 
 # 6. Post-Processing
-if ! $CONTINUE_PROCESSING; then
-    run_post_processing
-    echo "$(gettext "Post-processing completed.")"
-else
-    echo "$(gettext "Post-processing skipped (continue mode).")"
-fi
+run_post_processing
+echo "$(gettext "Post-processing completed.")"
 
 printf "$(gettext "Case available at: %s")\n" "$OUTPUT_DIR"
 echo "============================================="
