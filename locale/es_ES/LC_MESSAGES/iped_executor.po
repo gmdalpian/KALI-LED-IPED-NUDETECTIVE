@@ -172,3 +172,6 @@ msgstr "Archivando caso anterior en:"
 
 msgid "Select"
 msgstr "Seleccionar"
+
+msgid "Leftover case directory found without desktop shortcut. Removing old directory..."
+msgstr "Directorio de caso anterior encontrado sin acceso directo en el escritorio. Eliminando directorio antiguo..."

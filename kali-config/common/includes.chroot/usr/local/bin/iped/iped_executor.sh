@@ -219,6 +219,19 @@ setup_output_dir() {
         fi		
     fi
 
+	# Clean up ghost triage directory from previous sessions (Live USB non-persistence)
+    if [ "$OUTPUT_DIR" == "$OUTPUT_DIR_TRIAGE_CASE" ] && [ -d "$OUTPUT_DIR" ]; then
+        # Check if ANY corresponding desktop shortcut exists (IPED-Caso.desktop, IPED-Caso-01.desktop, etc)
+        if ! ls /home/kali/Desktop/IPED-Caso*.desktop 1> /dev/null 2>&1; then
+            echo "$(gettext 'Leftover case directory found without desktop shortcut. Removing old directory...')"
+            sudo rm -rf "$OUTPUT_DIR"
+            
+            # (Optional) If you also want to delete numbered legacy directories from previous sessions
+            # just uncomment the line below:
+            sudo rm -rf "${OUTPUT_DIR}-"*
+        fi
+    fi
+
     if [ -d "$OUTPUT_DIR" ]; then
         zenity_q_title=$(gettext "Existing Case")
         zenity_q_text=$(printf "$(gettext $'A case already exists at:\n<b>%s</b>\n\nWhat do you want to do?')" "$OUTPUT_DIR")
