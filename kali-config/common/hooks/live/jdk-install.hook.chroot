@@ -1,9 +1,10 @@
 #!/bin/bash
 set -e
 
-echo "[+] ===== INSTALLING OPENJFX 11 (REMOVE FROM REPOSITORY IN KALI 2026.2) ====="
+echo "[+] ===== INSTALLING OPENJFX 11 (REMOVED FROM REPOSITORY IN KALI 2026.2) ====="
 
 sudo apt install -y libgtk2.0-0t64
 sudo dpkg -i /root/java/*.deb
+rm -rf /root/java
 
 echo "[+] ===== FINALIZADO COM SUCESSO ====="
