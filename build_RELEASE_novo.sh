@@ -31,21 +31,27 @@ do_copy() {
     
     # 1. Limpeza e Clonagem do Repositório do Kali
     sudo rm -rf ${BASE_DIR}/kali-live
+    check_status "Remoção do diretório antigo kali-live"
+    
     sudo rm -rf ${BASE_DIR}/kali-config
+    check_status "Remoção do diretório temporário antigo kali-config"
     
     git clone https://gitlab.com/kalilinux/build-scripts/kali-live.git ${BASE_DIR}/kali-live
     check_status "Clonagem do repositório kali-live"
     
-    # 2. Extração das configurações principais
-    7z x ${EXTERNAL_DISK}/kali-config.zip -o${BASE_DIR}/
-    check_status "Extração do arquivo kali-config.zip"
+    # 2. Cópia das configurações principais direto para a pasta final
+    mkdir -p ${BASE_DIR}/kali-live/kali-config
+    check_status "Criação do diretório de destino kali-config"
+
+    cp -Rf ${EXTERNAL_DISK}/kali-config/* ${BASE_DIR}/kali-live/kali-config/
+    check_status "Cópia direta do diretório kali-config"
 
     # --- BLOCO NVIDIA: Integração da estrutura de pastas ---
     if [ "$NVIDIA_FLAG" = true ]; then
         echo "--- [AÇÃO: NVIDIA] Mesclando estrutura de pastas de $NVIDIA_SOURCE ---"
         
         if [ -d "$NVIDIA_SOURCE/kali-config" ]; then
-            cp -Rf "$NVIDIA_SOURCE/kali-config/"* "${BASE_DIR}/kali-config/"
+            cp -Rf "$NVIDIA_SOURCE/kali-config/"* "${BASE_DIR}/kali-live/kali-config/"
             check_status "Cópia da estrutura NVIDIA"
             echo "Estrutura NVIDIA integrada com sucesso."
         else
@@ -55,20 +61,23 @@ do_copy() {
     fi
 
     # 3. Processamento das bibliotecas Python (scripts de IA/Forense)
-    mkdir -p ${BASE_DIR}/kali-config/common/includes.chroot/usr/local/lib
+    mkdir -p ${BASE_DIR}/kali-live/kali-config/common/includes.chroot/usr/local/lib
+    check_status "Criação do diretório lib para Python"
     
     for f in ${EXTERNAL_DISK}/python/PYTHON*; do
         if [ -e "$f" ]; then
-            tar -vzxf "$f" -C ${BASE_DIR}/kali-config/common/includes.chroot/usr/local/lib
+            tar -vzxf "$f" -C ${BASE_DIR}/kali-live/kali-config/common/includes.chroot/usr/local/lib
             check_status "Extração da biblioteca Python: $f"
         fi
     done	
 
     if [ "$NVIDIA_FLAG" = true ]; then
-        mkdir -p ${BASE_DIR}/kali-config/common/includes.chroot/opt
+        mkdir -p ${BASE_DIR}/kali-live/kali-config/common/includes.chroot/opt
+        check_status "Criação do diretório opt para NVIDIA"
+        
         for f in ${EXTERNAL_DISK}/python/NVIDIA*; do
             if [ -e "$f" ]; then
-                tar -vzxf "$f" -C ${BASE_DIR}/kali-config/common/includes.chroot/opt
+                tar -vzxf "$f" -C ${BASE_DIR}/kali-live/kali-config/common/includes.chroot/opt
                 check_status "Extração dos pacotes NVIDIA: $f"
             fi
         done
@@ -79,18 +88,28 @@ do_copy() {
         echo '--- [AÇÃO: GLOBAL] Customizando versão global ---'
         
         # Remoção de atalhos e binários proprietários
-        rm -rf "${BASE_DIR}/kali-config/common/includes.chroot/usr/local/bin/LED"
-        rm -rf "${BASE_DIR}/kali-config/common/includes.chroot/usr/local/bin/NuDetective"
-        rm -rf "${BASE_DIR}/kali-config/common/includes.chroot/etc/skel/Desktop/LED - Escolher Midia.desktop"
-        rm -rf "${BASE_DIR}/kali-config/common/includes.chroot/etc/skel/Desktop/LED - Montar e Vasculhar.desktop"
-        rm -rf "${BASE_DIR}/kali-config/common/includes.chroot/etc/skel/Desktop/Nudetective.desktop"
+        rm -rf "${BASE_DIR}/kali-live/kali-config/common/includes.chroot/usr/local/bin/LED"
+        check_status "Remoção do binário LED"
+        
+        rm -rf "${BASE_DIR}/kali-live/kali-config/common/includes.chroot/usr/local/bin/NuDetective"
+        check_status "Remoção do binário NuDetective"
+        
+        rm -rf "${BASE_DIR}/kali-live/kali-config/common/includes.chroot/etc/skel/Desktop/LED - Escolher Midia.desktop"
+        check_status "Remoção de atalho: LED - Escolher Midia"
+        
+        rm -rf "${BASE_DIR}/kali-live/kali-config/common/includes.chroot/etc/skel/Desktop/LED - Montar e Vasculhar.desktop"
+        check_status "Remoção de atalho: LED - Montar e Vasculhar"
+        
+        rm -rf "${BASE_DIR}/kali-live/kali-config/common/includes.chroot/etc/skel/Desktop/Nudetective.desktop"
+        check_status "Remoção de atalho: Nudetective"
         
         # Cópia do papel de parede
-        mkdir -p "${BASE_DIR}/kali-config/common/includes.chroot/usr/share/backgrounds/kali/"
-        cp -f "${EXTERNAL_DISK}/kali-config/common/includes.chroot/etc/skel/Pictures/plano_de_fundo_kali1.jpg" \
-              "${BASE_DIR}/kali-config/common/includes.chroot/usr/share/backgrounds/kali/kali-cubes-16x9.jpg"
+        mkdir -p "${BASE_DIR}/kali-live/kali-config/common/includes.chroot/usr/share/backgrounds/kali/"
+        check_status "Criação do diretório para papel de parede"
         
-        check_status "Customização da versão global"
+        cp -f "${EXTERNAL_DISK}/kali-config/common/includes.chroot/etc/skel/Pictures/background_global_new_4x3.jpg" \
+              "${BASE_DIR}/kali-live/kali-config/common/includes.chroot/usr/share/backgrounds/kali/kali-cubes-16x9.jpg"
+        check_status "Cópia do papel de parede global"
     fi
 
     # --- BLOCO DE TRADUÇÃO: Compilação de .po para .mo ---
@@ -107,8 +126,9 @@ do_copy() {
                 lang=$(basename "$(dirname "$msg_dir")")
                 
                 # Define e cria o diretório de destino na estrutura de chroot do Kali
-                dest_dir="${BASE_DIR}/kali-config/common/includes.chroot/usr/share/locale/$lang/LC_MESSAGES"
+                dest_dir="${BASE_DIR}/kali-live/kali-config/common/includes.chroot/usr/share/locale/$lang/LC_MESSAGES"
                 mkdir -p "$dest_dir"
+                check_status "Criação do diretório locale para $lang"
                 
                 # Nome do arquivo de saída .mo
                 filename=$(basename "$po_file" .po)
@@ -123,15 +143,7 @@ do_copy() {
         echo "Aviso: Diretório de origens de tradução ($LOCALE_SRC) não encontrado. Ignorando compilação de idiomas."
     fi
 
-    # 4. Sincronização Final para a pasta de build
-    chmod -R +x ${BASE_DIR}/kali-config
-    cp -Rf ${BASE_DIR}/kali-config/* ${BASE_DIR}/kali-live/kali-config/
-    check_status "Sincronização final para a pasta de build"
-
-    # --- LIMPEZA DE ESPAÇO ---
-    echo "Limpando diretório temporário para liberar espaço..."
-    sudo rm -rf ${BASE_DIR}/kali-config/
-    echo "Diretório ${BASE_DIR}/kali-config/ removido."
+    echo "Arquivos copiados e preparados com sucesso diretamente em kali-live/kali-config."
 }
 
 # --- Função de Compilação da ISO ---
@@ -153,6 +165,7 @@ do_build() {
 
     if [ -f "$ISO_PATH" ]; then
         md5sum "$ISO_PATH" > "${ISO_PATH}.md5"
+        check_status "Geração do checksum MD5"
         
         # Construção dinâmica do nome da ISO com base nas flags
         FINAL_NAME="KALI-LED-IPED-NUDETECTIVE-$(date -I)-CSAM-TRIAGE"
@@ -169,6 +182,8 @@ do_build() {
         check_status "Cópia da ISO final para o disco externo"
         
         cp "${ISO_PATH}.md5" "${EXTERNAL_DISK}/images/${FINAL_NAME}.iso.md5"
+        check_status "Cópia do checksum para o disco externo"
+        
         echo "ISO gerada e copiada para o disco externo: ${FINAL_NAME}.iso"
     else
         echo "ERRO: O arquivo ISO não foi encontrado em $ISO_PATH"
