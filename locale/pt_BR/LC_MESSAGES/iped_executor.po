@@ -175,3 +175,6 @@ msgstr "Selecionar"
 
 msgid "Leftover case directory found without desktop shortcut. Removing old directory..."
 msgstr "Diretório de caso anterior encontrado sem atalho na área de trabalho. Removendo diretório antigo..."
+
+msgid "Interrupted case detected from the current session. Preserving directory..."
+msgstr "Caso interrompido detectado na sessão atual. Preservando diretório..."

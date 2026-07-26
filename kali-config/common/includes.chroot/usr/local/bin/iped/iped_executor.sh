@@ -223,12 +223,19 @@ setup_output_dir() {
     if [ "$OUTPUT_DIR" == "$OUTPUT_DIR_TRIAGE_CASE" ] && [ -d "$OUTPUT_DIR" ]; then
         # Check if ANY corresponding desktop shortcut exists (IPED-Caso.desktop, IPED-Caso-01.desktop, etc)
         if ! ls /home/kali/Desktop/IPED-Caso*.desktop 1> /dev/null 2>&1; then
-            echo "$(gettext 'Leftover case directory found without desktop shortcut. Removing old directory...')"
-            sudo rm -rf "$OUTPUT_DIR"
             
-            # (Optional) If you also want to delete numbered legacy directories from previous sessions
-            # just uncomment the line below:
-            sudo rm -rf "${OUTPUT_DIR}-"*
+            # Check if this is an interrupted case from the CURRENT session
+            local escaped_output_dir=$(sed 's#[&/\]#\\&#g' <<<"$OUTPUT_DIR")
+            if [ -f "$COMMAND_LOG_FILE" ] && grep -q "$escaped_output_dir" "$COMMAND_LOG_FILE"; then
+                echo "$(gettext 'Interrupted case detected from the current session. Preserving directory...')"
+            else
+                echo "$(gettext 'Leftover case directory found without desktop shortcut. Removing old directory...')"
+                sudo rm -rf "$OUTPUT_DIR"
+                
+                # (Optional) If you also want to delete numbered legacy directories from previous sessions
+                # just uncomment the line below:
+                sudo rm -rf "${OUTPUT_DIR}-"*
+            fi
         fi
     fi
 
