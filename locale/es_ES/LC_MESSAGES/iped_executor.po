@@ -178,3 +178,24 @@ msgstr "Directorio de caso anterior encontrado sin acceso directo en el escritor
 
 msgid "Interrupted case detected from the current session. Preserving directory..."
 msgstr "Caso interrumpido detectado en la sesión actual. Conservando directorio..."
+
+msgid "Incomplete Case Detected"
+msgstr "Caso Incompleto Detectado"
+
+msgid "An interrupted case was found at:\n<b>%s</b>\n\nWhat do you want to do?"
+msgstr "Se ha encontrado un caso interrumpido en:\n<b>%s</b>\n\n¿Qué desea hacer?"
+
+msgid "Delete case and start a new one"
+msgstr "Eliminar caso y comenzar uno nuevo"
+
+msgid "Command log not found. Cannot continue."
+msgstr "No se encontró el registro de comandos. No se puede continuar."
+
+msgid "A completed case already exists at:\n<b>%s</b>\n\nWhat do you want to do?"
+msgstr "Ya existe un caso completado en:\n<b>%s</b>\n\n¿Qué desea hacer?"
+
+msgid "Delete previous case and process a new one"
+msgstr "Eliminar caso anterior y procesar uno nuevo"
+
+msgid "Archive previous case and process a new one"
+msgstr "Archivar caso anterior y procesar uno nuevo"

@@ -16,7 +16,6 @@ IPED_DIR="/usr/local/bin/iped"
 OUTPUT_DIR_DESKTOP="/home/kali/Desktop/IPED-CASO"
 OUTPUT_DIR_TRIAGE_BASE="/home/kali/Desktop/triage"
 OUTPUT_DIR_TRIAGE_CASE="$OUTPUT_DIR_TRIAGE_BASE/IPED-CASO"
-COMMAND_LOG_FILE="/home/kali/Desktop/iped_comando_executado.log"
 MEDIA_DIR="/run/media"
 GPU_DETECT_SCRIPT="/usr/local/bin/gpu-detect.sh"
 
@@ -28,6 +27,9 @@ VENV_ROCM="/opt/venv-rocm/bin/activate"
 # --- Global Variables ---
 CONTINUE_PROCESSING=false
 RECOVERED_CMD=""
+COMMAND_LOG_FILE=""
+LOG_FILE_PATH=""
+FLAG_FILE=""
 KALI_UID=1000
 KALI_GID=1000
 TARGET_ARRAY=() # Global array to store targets securely
@@ -131,7 +133,6 @@ setup_output_dir() {
         fi
 
         if $TRIAGE_PARTITION_FOUND; then
-            LOG_FILE_PATH="$OUTPUT_DIR_TRIAGE_BASE/IPED-Processamento-$(date +%y%m%d%H%M).log"
             if test -f "$OUTPUT_DIR_TRIAGE_BASE/palavras-chave.txt"; then
                 KEYWORD_FILE_PATH="$OUTPUT_DIR_TRIAGE_BASE/palavras-chave.txt"
             else
@@ -141,33 +142,22 @@ setup_output_dir() {
             sudo cp "$IPED_DIR/LocalConfig-triage.txt" "$IPED_DIR/LocalConfig.txt"
 
             # --- START OF THREAD/RAM BALANCING LOGIC ---
-            # Collects total memory in KB and converts to MB
             local total_mem_kb=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
             local total_mem_mb=$((total_mem_kb / 1024))
-            
-            # Calculates maximum number of threads (1 thread for each 1024 MB)
             local max_threads=$((total_mem_mb / 1024))
             
-            # Ensures the system will run with at least 2 threads, even on very limited machines
-            if [ "$max_threads" -lt 2 ]; then
-                max_threads=2
-            fi
-            
+            if [ "$max_threads" -lt 2 ]; then max_threads=2; fi
             local cpu_cores=$(nproc)
             
-            # If the number of logical cores is greater than the memory in GB, limits IPED
             if [ "$cpu_cores" -gt "$max_threads" ]; then
                 printf "$(gettext "WARNING: Low memory per core detected (Cores: %s, RAM: %sMB).")\n" "$cpu_cores" "$total_mem_mb"
                 printf "$(gettext "Adjusting numThreads from 'default' to '%s' in LocalConfig.txt.")\n" "$max_threads"
-                
-                # Changes IPED configuration in the copied file
                 sudo sed -i "s/^numThreads = default/numThreads = $max_threads/" "$IPED_DIR/LocalConfig.txt"
             else
                 printf "$(gettext "Sufficient memory detected (Cores: %s, RAM: %sMB). Keeping numThreads = default.")\n" "$cpu_cores" "$total_mem_mb"
             fi
-            # --- END OF THREAD/RAM BALANCING LOGIC ---
 
-            # SWAP Logic
+            # --- SWAP Logic ---
             if [ "$PROFILE" == "csam_triage" ] || [ "$PROFILE" == "triage" ]; then
                 if [ "$(cat /proc/swaps | wc -l)" -le 1 ]; then
                     local swap_file_path="$OUTPUT_DIR_TRIAGE_BASE/swapfile"
@@ -200,12 +190,10 @@ setup_output_dir() {
                 fi
             fi 
         fi 
-
     else 
         echo "$(gettext "No IPED-TRIAGE partition found. Using Desktop.")"
         OUTPUT_DIR=$OUTPUT_DIR_DESKTOP
         DESKTOP_FILE="IPED-Caso.desktop"
-        LOG_FILE_PATH=""
         KEYWORD_FILE_PATH="$IPED_DIR/palavras-chave.txt"
 		
         if [ "$PROFILE" == "csam_triage" ] || [ "$PROFILE" == "triage" ]; then
@@ -213,123 +201,113 @@ setup_output_dir() {
             
             zenity_warn_title=$(gettext "Triage Partition Not Found")
             zenity_warn_text=$(printf "$(gettext $'For profile \'%s\', it is highly recommended to use an \'IPED-TRIAGE\' partition to store the case and create a SWAP file.\n\nContinuing may cause instability or lack of memory.')" "$PROFILE")
-            zenity --warning --title="$zenity_warn_title" \
-                   --text="$zenity_warn_text" \
-                   --width=400 2>/dev/null
+            zenity --warning --title="$zenity_warn_title" --text="$zenity_warn_text" --width=400 2>/dev/null
         fi		
     fi
 
-	# Clean up ghost triage directory from previous sessions (Live USB non-persistence)
-    if [ "$OUTPUT_DIR" == "$OUTPUT_DIR_TRIAGE_CASE" ] && [ -d "$OUTPUT_DIR" ]; then
-        # Check if ANY corresponding desktop shortcut exists (IPED-Caso.desktop, IPED-Caso-01.desktop, etc)
-        if ! ls /home/kali/Desktop/IPED-Caso*.desktop 1> /dev/null 2>&1; then
-            
-            # Check if this is an interrupted case from the CURRENT session
-            local escaped_output_dir=$(sed 's#[&/\]#\\&#g' <<<"$OUTPUT_DIR")
-            if [ -f "$COMMAND_LOG_FILE" ] && grep -q "$escaped_output_dir" "$COMMAND_LOG_FILE"; then
-                echo "$(gettext 'Interrupted case detected from the current session. Preserving directory...')"
-            else
-                echo "$(gettext 'Leftover case directory found without desktop shortcut. Removing old directory...')"
-                sudo rm -rf "$OUTPUT_DIR"
-                
-                # (Optional) If you also want to delete numbered legacy directories from previous sessions
-                # just uncomment the line below:
-                sudo rm -rf "${OUTPUT_DIR}-"*
-            fi
-        fi
-    fi
+    # --- CENTRALIZED LOG AND FLAG PATHS ---
+    COMMAND_LOG_FILE="$OUTPUT_DIR/iped_comando_executado.log"
+    LOG_FILE_PATH="$OUTPUT_DIR/IPED-Processamento-$(date +%y%m%d%H%M).log"
+    FLAG_FILE="$OUTPUT_DIR/.processing_incomplete"
 
+    # --- MULTI-CASE & RESUME LOGIC MATRIX ---
     if [ -d "$OUTPUT_DIR" ]; then
-        zenity_q_title=$(gettext "Existing Case")
-        zenity_q_text=$(printf "$(gettext $'A case already exists at:\n<b>%s</b>\n\nWhat do you want to do?')" "$OUTPUT_DIR")
+        if [ -f "$FLAG_FILE" ]; then
+            # SCENARIO A: INCOMPLETE CASE (Flag Exists)
+            zenity_q_title=$(gettext "Incomplete Case Detected")
+            zenity_q_text=$(printf "$(gettext $'An interrupted case was found at:\n<b>%s</b>\n\nWhat do you want to do?')" "$OUTPUT_DIR")
 
-        # Using zenity --radiolist to present exclusive options with OK/Cancel buttons
-        USER_CHOICE=$(zenity --list --radiolist \
-            --title="$zenity_q_title" \
-            --text="$zenity_q_text" \
-            --column="$(gettext 'Select')" --column="ID" --column="$(gettext 'Action')" \
-            --hide-column=2 --print-column=2 \
-            FALSE "1" "$(gettext 'Continue previous processing')" \
-            TRUE "2" "$(gettext 'Create a new case (archive the current one)')" \
-            --width=450 --height=220 2>/dev/null)
+            USER_CHOICE=$(zenity --list --radiolist \
+                --title="$zenity_q_title" \
+                --text="$zenity_q_text" \
+                --column="$(gettext 'Select')" --column="ID" --column="$(gettext 'Action')" \
+                --hide-column=2 --print-column=2 \
+                TRUE "1" "$(gettext 'Continue previous processing')" \
+                FALSE "2" "$(gettext 'Delete case and start a new one')" \
+                --width=450 --height=220 2>/dev/null)
 
-        # If clicked Cancel, closed the window, or an error occurred
-        if [ $? -ne 0 ] || [ -z "$USER_CHOICE" ]; then
-            echo "$(gettext 'Operation canceled by the user.')"
-            exit 0
-        fi
+            if [ $? -ne 0 ] || [ -z "$USER_CHOICE" ]; then exit 0; fi
 
-        if [ "$USER_CHOICE" == "2" ]; then
-            # Option 2: Create a new case (rename/archive the old one)
-            local counter=1
-            local counter_str
-            local new_dir_name
-            
-            # Find the next available number
-            while true; do
-                counter_str=$(printf "%02d" "$counter")
-                new_dir_name="${OUTPUT_DIR}-${counter_str}"
-                if [ ! -d "$new_dir_name" ]; then
-                    break
+            if [ "$USER_CHOICE" == "1" ]; then
+                CONTINUE_PROCESSING=true
+                if [ -f "$COMMAND_LOG_FILE" ]; then
+                     local escaped_output_dir=$(sed 's#[&/\]#\\&#g' <<<"$OUTPUT_DIR")
+                     local original_cmd=$(grep "$escaped_output_dir" "$COMMAND_LOG_FILE" | tail -n 1 | sed -E 's/^\[[^]]+\] [^:]+: //')
+                     
+                     if [ -z "$original_cmd" ]; then exit 7; fi
+                     local original_profile=$(echo "$original_cmd" | grep -o '\-profile [^ ]*' | awk '{print $2}' | tr -d "'\"")
+                     PROFILE=$original_profile
+
+                     if echo "$original_cmd" | grep -q -- "-jar iped.jar"; then
+                         if ! echo "$original_cmd" | grep -q -- '--continue'; then
+                              RECOVERED_CMD=$(echo "$original_cmd" | sed 's/-jar iped\.jar/-jar iped.jar --continue/')
+                         else
+                              RECOVERED_CMD="$original_cmd"
+                         fi
+                     else
+                         exit 9
+                     fi
+                else
+                     zenity --error --text="$(gettext 'Command log not found. Cannot continue.')"
+                     exit 7
                 fi
-                ((counter++))
-            done
+            else
+                # Delete interrupted case
+                sudo rm -rf "$OUTPUT_DIR"
+                sudo mkdir -p "$OUTPUT_DIR"
+                sudo chown $KALI_UID:$KALI_GID "$OUTPUT_DIR"
+                CONTINUE_PROCESSING=false
+            fi
+        else
+            # SCENARIO B: COMPLETED CASE (No Flag)
+            zenity_q_title=$(gettext "Existing Case")
+            zenity_q_text=$(printf "$(gettext $'A completed case already exists at:\n<b>%s</b>\n\nWhat do you want to do?')" "$OUTPUT_DIR")
 
-            echo "$(gettext 'Archiving previous case to:') $new_dir_name"
-            sudo mv "$OUTPUT_DIR" "$new_dir_name"
+            USER_CHOICE=$(zenity --list --radiolist \
+                --title="$zenity_q_title" \
+                --text="$zenity_q_text" \
+                --column="$(gettext 'Select')" --column="ID" --column="$(gettext 'Action')" \
+                --hide-column=2 --print-column=2 \
+                FALSE "1" "$(gettext 'Delete previous case and process a new one')" \
+                TRUE "2" "$(gettext 'Archive previous case and process a new one')" \
+                --width=450 --height=220 2>/dev/null)
 
-            # Update the Desktop shortcut to point to the archived case
-            local desk_shortcut="/home/kali/Desktop/IPED-Caso.desktop"
-            local new_desk_shortcut="/home/kali/Desktop/IPED-Caso-${counter_str}.desktop"
+            if [ $? -ne 0 ] || [ -z "$USER_CHOICE" ]; then exit 0; fi
 
-            if [ -f "$desk_shortcut" ]; then
-                sudo mv "$desk_shortcut" "$new_desk_shortcut"
-                # Replace old paths with new ones in the renamed shortcut using '|' as delimiter in sed
-                sudo sed -i "s|${OUTPUT_DIR}|${new_dir_name}|g" "$new_desk_shortcut"
+            if [ "$USER_CHOICE" == "2" ]; then
+                local counter=1
+                local counter_str
+                local new_dir_name
                 
-                # Get the current system locale (e.g., pt_BR, en_US, es_ES)
-                local current_locale=$(echo "$LANG" | cut -d. -f1)
+                while true; do
+                    counter_str=$(printf "%02d" "$counter")
+                    new_dir_name="${OUTPUT_DIR}-${counter_str}"
+                    if [ ! -d "$new_dir_name" ]; then break; fi
+                    ((counter++))
+                done
 
-                # Update the default Name property inside the shortcut to reflect the numbering
-                sudo sed -i "s|^Name=.*|&-${counter_str}|" "$new_desk_shortcut"
-                
-                # Update the localized Name property dynamically based on the current system locale
-                sudo sed -i "s|^Name\[.*\]=.*|&-${counter_str}|" "$new_desk_shortcut"
+                echo "$(gettext 'Archiving previous case to:') $new_dir_name"
+                sudo mv "$OUTPUT_DIR" "$new_dir_name"
+
+                local desk_shortcut="/home/kali/Desktop/IPED-Caso.desktop"
+                local new_desk_shortcut="/home/kali/Desktop/IPED-Caso-${counter_str}.desktop"
+
+                if [ -f "$desk_shortcut" ]; then
+                    sudo mv "$desk_shortcut" "$new_desk_shortcut"
+                    sudo sed -i "s|${OUTPUT_DIR}|${new_dir_name}|g" "$new_desk_shortcut"
+                    sudo sed -i "s|^Name=.*|&-${counter_str}|" "$new_desk_shortcut"
+                    sudo sed -i "s|^Name\[.*\]=.*|&-${counter_str}|" "$new_desk_shortcut"
+                fi
+            else
+                sudo rm -rf "$OUTPUT_DIR"
             fi
 
-            # Prepare the new empty main directory
             sudo mkdir -p "$OUTPUT_DIR"
             sudo chown $KALI_UID:$KALI_GID "$OUTPUT_DIR"
             CONTINUE_PROCESSING=false
-
-		elif [ "$USER_CHOICE" == "1" ]; then
-            # Option 1: Continue previous processing (Original Logic Maintained)
-            CONTINUE_PROCESSING=true
-            if [ -f "$COMMAND_LOG_FILE" ]; then
-                 local escaped_output_dir=$(sed 's#[&/\]#\\&#g' <<<"$OUTPUT_DIR")
-                 
-                 # Regex updated to extract the command regardless of the log language
-                 local original_cmd=$(grep "$escaped_output_dir" "$COMMAND_LOG_FILE" | tail -n 1 | sed -E 's/^\[[^]]+\] [^:]+: //')
-
-                 if [ -z "$original_cmd" ]; then exit 7; fi
-                 
-                 local original_profile=$(echo "$original_cmd" | grep -o '\-profile [^ ]*' | awk '{print $2}' | tr -d "'\"")
-                 PROFILE=$original_profile
-
-                 if echo "$original_cmd" | grep -q -- "-jar iped.jar"; then
-                     if ! echo "$original_cmd" | grep -q -- '--continue'; then
-                          RECOVERED_CMD=$(echo "$original_cmd" | sed 's/-jar iped\.jar/-jar iped.jar --continue/')
-                     else
-                          RECOVERED_CMD="$original_cmd"
-                     fi
-                 else
-                     exit 9
-                 fi
-            else
-                 exit 7
-            fi
         fi
     else
+        # SCENARIO C: FRESH START (Directory does not exist)
         sudo mkdir -p "$OUTPUT_DIR"
         sudo chown $KALI_UID:$KALI_GID "$OUTPUT_DIR"
         CONTINUE_PROCESSING=false
@@ -543,11 +521,15 @@ else
     fi
     # ------------------------------------------	
 
-    # COMMAND LOG
+# COMMAND LOG
     printf "$(gettext "Registering command in %s...")\n" "$COMMAND_LOG_FILE"
     mkdir -p "$(dirname "$COMMAND_LOG_FILE")"
     printf "$(gettext "[%s] Executing: %s")\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$LOG_CMD" >> "$COMMAND_LOG_FILE"
     chown kali:kali "$COMMAND_LOG_FILE" || echo "$(gettext "Warning: Failed to change log file owner.")"
+
+    # CREATE CONTROL FLAG
+    touch "$FLAG_FILE"
+    chown kali:kali "$FLAG_FILE" 2>/dev/null
 
     echo "$(gettext "Starting IPED... This may take a long time.")"
 
@@ -563,10 +545,15 @@ else
 
     if [ $? -ne 0 ]; then
         echo "$(gettext "ERROR: IPED processing failed.")"
-        zenity_main_err=$(printf "$(gettext $'An error occurred during IPED processing.\nCheck the log in this terminal or at %s\n\nYou can try running again and choose \'Continue Previous Processing\'.')" "$LOG_FILE_PATH")
+        zenity_main_err=$(printf "$(gettext $'An error occurred during IPED processing.\nCheck the log in this terminal or at %s\n\nYou can try running again and choose \'Continue previous processing\'.')" "$LOG_FILE_PATH")
         zenity --error --text="$zenity_main_err" --width=500 2>/dev/null
         exit 4
+	else
+		# PROCESSING COMPLETED SUCCESSFULLY: REMOVE FLAG
+        rm -f "$FLAG_FILE"
     fi
+    
+
 fi
 
 echo "$(gettext "IPED processing finished successfully.")"

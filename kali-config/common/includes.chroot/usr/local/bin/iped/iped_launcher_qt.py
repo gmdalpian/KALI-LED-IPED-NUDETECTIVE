@@ -313,12 +313,13 @@ class App(QMainWindow):
         self.browse_file_button.clicked.connect(self.browse_file)
         manual_buttons_layout.addWidget(self.browse_file_button)
 
-        self.manual_path_label = QLabel(_("Selected: {}").format(self.manual_selected_path))
-        self.manual_path_label.setObjectName("ManualPathLabel")
-        self.manual_path_label.setWordWrap(True)
+        # ALTERAÇÃO 1: Trocado QLabel estático por QLineEdit
+        self.manual_path_input = QLineEdit(self.manual_selected_path)
+        self.manual_path_input.setObjectName("ManualPathInput")
+        self.manual_path_input.setPlaceholderText(_("Enter or paste the path here..."))
 
         manual_layout.addLayout(manual_buttons_layout)
-        manual_layout.addWidget(self.manual_path_label)
+        manual_layout.addWidget(self.manual_path_input)
 
         self.manual_frame.setVisible(False) # Oculto por padrão
         right_layout.addWidget(self.manual_frame)
@@ -444,12 +445,17 @@ class App(QMainWindow):
                 border-color: #03a9f4;
                 background-color: #f5f5f5;
             }
-            QLabel#ManualPathLabel {
-                font-size: 9pt;
-                color: #37474f;
-                background-color: #eceff1;
+            /* ALTERAÇÃO 4: Estilização do QLineEdit */
+            QLineEdit#ManualPathInput {
+                font-size: 10pt;
+                color: #212121;
+                background-color: #ffffff;
+                border: 1px solid #b0bec5;
                 border-radius: 4px;
                 padding: 5px;
+            }
+            QLineEdit#ManualPathInput:focus {
+                border-color: #03a9f4; /* Azul ao clicar dentro */
             }
         """)
 
@@ -652,10 +658,11 @@ class App(QMainWindow):
         self.manual_frame.setVisible(self.selected_target == "manual_dir")
 
     def _update_manual_path(self, path):
-        """Função helper para atualizar a variável e o label."""
+        """Função helper para atualizar a variável e o input."""
+        # ALTERAÇÃO 2: Atualizar o QLineEdit em vez do QLabel
         if path:
             self.manual_selected_path = path
-            self.manual_path_label.setText(_("Selected: {}").format(path))
+            self.manual_path_input.setText(path)
 
     # --- FUNÇÃO MODIFICADA ---
     def _run_mount_script_if_needed(self):
@@ -727,6 +734,7 @@ class App(QMainWindow):
         if not self._run_mount_script_if_needed():
             return
 
+        # CORREÇÃO DO BUG: Trocado '_' por '_filter' para não conflitar com a função de tradução
         path, _filter = QFileDialog.getOpenFileName(
             self,
             _("Select Image File"),
@@ -736,6 +744,9 @@ class App(QMainWindow):
         self._update_manual_path(path)
 
     def start_processing(self):
+        # ALTERAÇÃO 3: Lê o caminho atual diretamente do campo de texto (remove espaços extras)
+        self.manual_selected_path = self.manual_path_input.text().strip()
+
         # 1. Validação
         path = self.manual_selected_path
 
