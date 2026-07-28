@@ -548,14 +548,13 @@ else
         zenity_main_err=$(printf "$(gettext $'An error occurred during IPED processing.\nCheck the log in this terminal or at %s\n\nYou can try running again and choose \'Continue previous processing\'.')" "$LOG_FILE_PATH")
         zenity --error --text="$zenity_main_err" --width=500 2>/dev/null
         exit 4
-	else
-		# PROCESSING COMPLETED SUCCESSFULLY: REMOVE FLAG
-        rm -f "$FLAG_FILE"
     fi
-    
 
 fi
 
+# PROCESSING COMPLETED SUCCESSFULLY: REMOVE FLAG
+rm -f "$FLAG_FILE"
+		
 echo "$(gettext "IPED processing finished successfully.")"
 echo "---------------------------------------------"
 
