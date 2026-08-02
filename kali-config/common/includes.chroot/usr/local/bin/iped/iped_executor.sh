@@ -333,10 +333,12 @@ build_targets() {
 
             # 2. LDM (Windows RAID)
             sudo ldmtool create all &> /dev/null
-            while read -r line ; do
-                local disk=$(echo "$line" | awk '{print $1}')
-                TARGET_ARRAY+=("-d" "/dev/mapper/$disk")
-            done <<< "$(lsblk -lno NAME,TYPE | grep '\dm\b')"
+            sudo udevadm settle
+            while read -r disk; do
+                if [[ -n "$disk" ]]; then
+                    TARGET_ARRAY+=("-d" "/dev/mapper/$disk")
+                fi
+            done <<< "$(lsblk -lno NAME --filter "TYPE == 'ldm'")"
 
             # 3. VSS
             if [ -d "/vss" ]; then

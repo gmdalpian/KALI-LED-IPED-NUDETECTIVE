@@ -2,13 +2,12 @@
 # -*- coding: utf-8 -*-
 #
 # iped_launcher_qt.py
-# Interface gráfica em Python/PyQt6 no formato "Wizard" (Assistente).
-# (Versão que chama scripts backend SEM sudo)
+# Python/PyQt6 graphical interface in "Wizard" format.
 #
 import sys
 import os
 import subprocess
-import re # Importar regex para extrair o nome base do disco
+import re # Import regex to extract the base disk name
 import shlex 
 import gettext
 import locale
@@ -20,11 +19,11 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 from PyQt6.QtCore import Qt, QSize
 
-# --- CONFIGURAÇÃO DE INTERNACIONALIZAÇÃO (i18n) ---
+# --- INTERNATIONALIZATION CONFIGURATION (i18n) ---
 APP_NAME = "iped_launcher"
 LOCALE_DIR = "/usr/share/locale"
 
-# Tenta definir o locale com base no ambiente do sistema
+# Attempts to set the locale based on the system environment
 try:
     locale.setlocale(locale.LC_ALL, '')
 except locale.Error:
@@ -34,7 +33,7 @@ translate = gettext.translation(APP_NAME, LOCALE_DIR, fallback=True)
 _ = translate.gettext
 # --------------------------------------------------
 
-# --- Dicionários de Descrição (ATUALIZADOS E TRADUZIDOS) ---
+# --- Description Dictionaries (UPDATED AND TRANSLATED) ---
 PROFILE_INFO = {
     "csam_triage": {
         "title": _("CSAM-Triage"), 
@@ -71,10 +70,10 @@ TARGET_INFO = {
     }
 }
 
-# Filtro de arquivos de imagem forense (ATUALIZADO E TRADUZIDO)
+# Forensic image files filter (UPDATED AND TRANSLATED)
 FORENSIC_IMAGE_FILTER = _("Forensic Images (*.E01 *.Ex01 *.e01 *.ex01 *.dd *.raw *.img *.vmdk *.vhd *.AFF *.ufdr *.UFDR);;All Files (*)")
 
-# --- Caminho do script de montagem ---
+# --- Mount script path ---
 MOUNT_SCRIPT_PATH = "/home/kali/mount_disks.sh"
 
 class App(QMainWindow):
@@ -84,34 +83,34 @@ class App(QMainWindow):
         self.setWindowTitle(_("IPED Forensic Processing Wizard"))
         self.setFixedSize(800, 500)
 
-        # --- Caminho do Script Executor ---
+        # --- Executor Script Path ---
         self.script_dir = os.path.dirname(os.path.realpath(__file__))
         self.executor_script = os.path.join(self.script_dir, "iped_executor.sh")
 
-        # --- NOVOS PADRÕES ---
-        self.selected_profile = "csam_triage" # Padrão
-        self.selected_target = "mounted_files"  # Padrão
+        # --- NEW DEFAULTS ---
+        self.selected_profile = "csam_triage" # Default
+        self.selected_target = "mounted_files"  # Default
 
-        # --- Variável para armazenar o caminho manual ---
-        self.manual_selected_path = "/run/media" # Pré-preenchido
+        # --- Variable to store the manual path ---
+        self.manual_selected_path = "/run/media" # Pre-filled
 
-        # --- VARIÁVEL DE CONTROLE PARA O SCRIPT DE MONTAGEM ---
+        # --- CONTROL VARIABLE FOR THE MOUNT SCRIPT ---
         self.mount_script_run = False
 
         self.init_ui()
         self.load_stylesheet()
         self.go_to_page_1()
-        self.center_window() # Centraliza a janela
+        self.center_window() # Centers the window
 
     def center_window(self):
-        """Centraliza a janela na tela principal."""
+        """Centers the window on the main screen."""
         if self.screen():
             screen_geo = self.screen().availableGeometry()
             window_geo = self.frameGeometry()
             self.move(screen_geo.center() - window_geo.center())
 
     def init_ui(self):
-        # --- Carregar Ícone da Aplicação ---
+        # --- Load Application Icon ---
         app_icon_path = os.path.join(self.script_dir, "analisador.png")
         if os.path.exists(app_icon_path):
             self.setWindowIcon(QIcon(app_icon_path))
@@ -119,14 +118,14 @@ class App(QMainWindow):
             print(_("Warning: Icon 'analisador.png' not found. Using default icon."))
             self.setWindowIcon(QIcon.fromTheme("applications-utilities"))
 
-        # --- Widget Central e Layout Principal ---
+        # --- Central Widget and Main Layout ---
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # --- Título Superior ---
+        # --- Top Title ---
         title_bar = QFrame()
         title_bar.setObjectName("TitleBar")
         title_bar_layout = QHBoxLayout(title_bar)
@@ -134,29 +133,29 @@ class App(QMainWindow):
         self.title_label = QLabel(_("Step 1 of 2: Select Processing Mode"))
         self.title_label.setObjectName("TitleLabel")
 
-        title_bar_layout.addWidget(self.title_label) # Título à esquerda
-        title_bar_layout.addStretch() # Empurra os botões para a direita
+        title_bar_layout.addWidget(self.title_label) # Title on the left
+        title_bar_layout.addStretch() # Pushes buttons to the right
 
         self.sys_info_button = QToolButton()
-        self.sys_info_button.setIcon(QIcon.fromTheme("utilities-system-monitor")) # Ícone de info
-        self.sys_info_button.setObjectName("SysInfoButton") # Para QSS
+        self.sys_info_button.setIcon(QIcon.fromTheme("utilities-system-monitor")) # Info icon
+        self.sys_info_button.setObjectName("SysInfoButton") # For QSS
         self.sys_info_button.setToolTip(_("View System Information"))
         self.sys_info_button.clicked.connect(self.show_system_info)
         title_bar_layout.addWidget(self.sys_info_button)
 
         self.help_button = QToolButton()
-        self.help_button.setIcon(QIcon.fromTheme("help-contents")) # Ícone padrão de ajuda
-        self.help_button.setObjectName("HelpButton") # Para QSS
+        self.help_button.setIcon(QIcon.fromTheme("help-contents")) # Default help icon
+        self.help_button.setObjectName("HelpButton") # For QSS
         self.help_button.setToolTip(_("Open User Manual"))
         self.help_button.clicked.connect(self.open_help_manual)
         title_bar_layout.addWidget(self.help_button)
 
         main_layout.addWidget(title_bar)
 
-        # --- Stack de Páginas ---
+        # --- Page Stack ---
         self.stacked_widget = QStackedWidget()
 
-        # Criar e adicionar as páginas
+        # Create and add pages
         self.page_1 = self.create_page_1()
         self.page_2 = self.create_page_2()
         self.stacked_widget.addWidget(self.page_1)
@@ -164,7 +163,7 @@ class App(QMainWindow):
 
         main_layout.addWidget(self.stacked_widget)
 
-        # --- Barra de Navegação Inferior ---
+        # --- Bottom Navigation Bar ---
         nav_bar = QFrame()
         nav_bar.setObjectName("NavBar")
         nav_layout = QHBoxLayout(nav_bar)
@@ -173,13 +172,13 @@ class App(QMainWindow):
         self.exit_button.clicked.connect(self.close)
 
         nav_layout.addWidget(self.exit_button)
-        nav_layout.addStretch() # Espaço flexível
+        nav_layout.addStretch() # Flexible space
 
         self.back_button = QPushButton(_("Back"))
         self.back_button.clicked.connect(self.go_to_page_1)
 
         self.next_button = QPushButton(_("Next"))
-        self.next_button.setObjectName("NextButton") # Botão de destaque
+        self.next_button.setObjectName("NextButton") # Highlighted button
         self.next_button.clicked.connect(self.go_to_page_2)
 
         self.start_button = QPushButton(_(" Start Processing"))
@@ -194,12 +193,12 @@ class App(QMainWindow):
         main_layout.addWidget(nav_bar)
 
     def create_page_1(self):
-        """Cria a página de seleção de PERFIL."""
+        """Creates the PROFILE selection page."""
         page = QWidget()
         page_layout = QHBoxLayout(page)
         page_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Coluna da Esquerda (Ícones)
+        # Left Column (Icons)
         left_col = QFrame()
         left_col.setObjectName("IconColumn")
         left_layout = QVBoxLayout(left_col)
@@ -218,7 +217,7 @@ class App(QMainWindow):
         self.profile_group.buttonToggled.connect(self.update_profile_details)
         page_layout.addWidget(left_col)
 
-        # Coluna da Direita (Detalhes)
+        # Right Column (Details)
         right_col = QFrame()
         right_col.setObjectName("DetailsColumn")
         right_layout = QVBoxLayout(right_col)
@@ -240,17 +239,17 @@ class App(QMainWindow):
         right_layout.addSpacing(15)
         right_layout.addWidget(self.profile_details_desc)
         right_layout.addStretch()
-        page_layout.addWidget(right_col, 1) # '1' faz esta coluna esticar
+        page_layout.addWidget(right_col, 1) # '1' makes this column stretch
 
         return page
 
     def create_page_2(self):
-        """Cria a página de seleção de ALVO."""
+        """Creates the TARGET selection page."""
         page = QWidget()
         page_layout = QHBoxLayout(page)
         page_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Coluna da Esquerda (Ícones)
+        # Left Column (Icons)
         left_col = QFrame()
         left_col.setObjectName("IconColumn")
         left_layout = QVBoxLayout(left_col)
@@ -269,7 +268,7 @@ class App(QMainWindow):
         self.target_group.buttonToggled.connect(self.update_target_details)
         page_layout.addWidget(left_col)
 
-        # Coluna da Direita (Detalhes)
+        # Right Column (Details)
         right_col = QFrame()
         right_col.setObjectName("DetailsColumn")
         right_layout = QVBoxLayout(right_col)
@@ -291,7 +290,7 @@ class App(QMainWindow):
         right_layout.addSpacing(15)
         right_layout.addWidget(self.target_details_desc)
 
-        # Bloco de seleção manual
+        # Manual selection block
         self.manual_frame = QFrame()
         self.manual_frame.setObjectName("ManualFrame")
         manual_layout = QVBoxLayout(self.manual_frame)
@@ -313,7 +312,7 @@ class App(QMainWindow):
         self.browse_file_button.clicked.connect(self.browse_file)
         manual_buttons_layout.addWidget(self.browse_file_button)
 
-        # ALTERAÇÃO 1: Trocado QLabel estático por QLineEdit
+        # ALTERATION 1: Swapped static QLabel for QLineEdit
         self.manual_path_input = QLineEdit(self.manual_selected_path)
         self.manual_path_input.setObjectName("ManualPathInput")
         self.manual_path_input.setPlaceholderText(_("Enter or paste the path here..."))
@@ -321,7 +320,7 @@ class App(QMainWindow):
         manual_layout.addLayout(manual_buttons_layout)
         manual_layout.addWidget(self.manual_path_input)
 
-        self.manual_frame.setVisible(False) # Oculto por padrão
+        self.manual_frame.setVisible(False) # Hidden by default
         right_layout.addWidget(self.manual_frame)
 
         right_layout.addStretch()
@@ -330,7 +329,7 @@ class App(QMainWindow):
         return page
 
     def create_icon_button(self, icon_name):
-        """Cria um botão de ícone customizado."""
+        """Creates a custom icon button."""
         btn = QToolButton()
         btn.setCheckable(True)
         btn.setAutoExclusive(True)
@@ -341,13 +340,13 @@ class App(QMainWindow):
         return btn
 
     def load_stylesheet(self):
-        """Carrega o QSS para estilizar a aplicação."""
+        """Loads QSS to style the application."""
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #ffffff;
             }
             QFrame#TitleBar {
-                background-color: #37474f; /* Cinza escuro */
+                background-color: #37474f; /* Dark gray */
                 padding: 10px 15px;
             }
             QLabel#TitleLabel {
@@ -368,12 +367,12 @@ class App(QMainWindow):
                 background-color: #546e7a;
             }
             QFrame#NavBar {
-                background-color: #eceff1; /* Cinza claro */
+                background-color: #eceff1; /* Light gray */
                 border-top: 1px solid #cfd8dc;
                 padding: 8px;
             }
             QFrame#IconColumn {
-                background-color: #f5f5f5; /* Cinza bem claro */
+                background-color: #f5f5f5; /* Very light gray */
                 border-right: 1px solid #e0e0e0;
                 padding: 10px;
             }
@@ -383,25 +382,25 @@ class App(QMainWindow):
             }
             QToolButton {
                 background-color: white;
-                border: 2px solid #b0bec5; /* Borda cinza */
+                border: 2px solid #b0bec5; /* Gray border */
                 border-radius: 8px;
                 margin: 5px;
             }
             QToolButton:hover {
-                border-color: #03a9f4; /* Azul no hover */
+                border-color: #03a9f4; /* Blue on hover */
             }
             QToolButton:checked {
-                background-color: #e3f2fd; /* Fundo azul claro */
-                border-color: #03a9f4; /* Borda azul forte */
+                background-color: #e3f2fd; /* Light blue background */
+                border-color: #03a9f4; /* Strong blue border */
             }
             QLabel#DetailsTitle {
                 font-size: 16pt;
                 font-weight: bold;
-                color: #0277bd; /* Azul escuro */
+                color: #0277bd; /* Dark blue */
             }
             QLabel#DetailsDescription {
                 font-size: 11pt;
-                color: #212121; /* Texto escuro, alto contraste */
+                color: #212121; /* Dark text, high contrast */
                 line-height: 150%;
             }
             QPushButton {
@@ -418,13 +417,13 @@ class App(QMainWindow):
             }
             QPushButton#NextButton {
                 font-weight: bold;
-                background-color: #039be5; /* Azul */
+                background-color: #039be5; /* Blue */
                 color: white;
                 border: none;
             }
             QPushButton#StartButton {
                 font-weight: bold;
-                background-color: #4CAF50; /* Verde */
+                background-color: #4CAF50; /* Green */
                 color: white;
                 border: none;
             }
@@ -445,7 +444,7 @@ class App(QMainWindow):
                 border-color: #03a9f4;
                 background-color: #f5f5f5;
             }
-            /* ALTERAÇÃO 4: Estilização do QLineEdit */
+            /* ALTERATION 4: QLineEdit styling */
             QLineEdit#ManualPathInput {
                 font-size: 10pt;
                 color: #212121;
@@ -455,28 +454,28 @@ class App(QMainWindow):
                 padding: 5px;
             }
             QLineEdit#ManualPathInput:focus {
-                border-color: #03a9f4; /* Azul ao clicar dentro */
+                border-color: #03a9f4; /* Blue when clicked inside */
             }
         """)
 
     def open_help_manual(self):
-        """Abre o manual PDF de acordo com o idioma do sistema, com fallback para o inglês."""
-        # 1. Detecta o idioma do ambiente (ex: pt_BR.UTF-8 -> pt_BR)
+        """Opens the PDF manual according to the system language, with a fallback to English."""
+        # 1. Detects the environment language (e.g., pt_BR.UTF-8 -> pt_BR)
         lang_env = os.environ.get("LANG", "en_US.UTF-8")
         lang_code = lang_env.split('.')[0] if lang_env else "en_US"
 
         base_dir = "/home/kali/Desktop/User_Manual"
         
-        # 2. Tenta encontrar o manual no idioma local
+        # 2. Tries to find the manual in the local language
         manual_path = f"{base_dir}/User_Manual_KALI-LED-IPED-NUDETECTIVE_{lang_code}.pdf"
 
-        # 3. Fallback: Se não existir, tenta abrir a versão padrão em inglês (en_US)
+        # 3. Fallback: If it doesn't exist, tries to open the default version in English (en_US)
         if not os.path.exists(manual_path):
             fallback_path = f"{base_dir}/User_Manual_KALI-LED-IPED-NUDETECTIVE_en_US.pdf"
             if os.path.exists(fallback_path):
                 manual_path = fallback_path
 
-        # 4. Verifica se ao menos o fallback existia antes de abrir
+        # 4. Checks if at least the fallback existed before opening
         if not os.path.exists(manual_path):
             QMessageBox.critical(self, _("Error Opening Manual"),
                                  _("Could not find the manual file at:\n{}").format(manual_path))
@@ -489,7 +488,7 @@ class App(QMainWindow):
                                  _("Could not open the manual.\nCheck if 'xdg-open' is installed.\n\nError: {}").format(e))
 
     def show_system_info(self):
-        """Coleta e exibe as informações do sistema em um diálogo."""
+        """Gathers and displays system information in a dialog."""
 
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
@@ -512,13 +511,13 @@ class App(QMainWindow):
             QMessageBox.critical(self, _("Error"), _("Failed to gather system information: {}").format(e))
 
     def _gather_system_info(self):
-        """Executa comandos no shell para coletar informações."""
+        """Executes shell commands to gather information."""
         info = []
 
         def run_cmd(cmd, check_return_code=True):
             try:
                 env = os.environ.copy()
-                env['LANG'] = 'C' # Garante saída em inglês internamente
+                env['LANG'] = 'C' # Ensures English output internally
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, check=check_return_code, env=env)
                 return result.stdout.strip()
             except subprocess.TimeoutExpired:
@@ -549,7 +548,7 @@ class App(QMainWindow):
         if not ram_output.startswith("ERRO") and not ram_output.startswith("TIMEOUT"):
             try:
                 mem_kb = int(ram_output.split()[1])
-                mem_gb = mem_kb / (1024 * 1024) # Converte KiB para GiB
+                mem_gb = mem_kb / (1024 * 1024) # Converts KiB to GiB
                 ram_total = f"{mem_gb:.1f} GB"
             except Exception as e:
                 ram_total = _("Error parsing RAM: {}").format(e)
@@ -557,11 +556,11 @@ class App(QMainWindow):
             ram_total = ram_output
         info.append(_("Total RAM Memory: {}").format(ram_total))
 
-        # 3. Discos e Partições
+        # 3. Disks and Partitions
         info.append(_("\nDisks and Partitions (Ignoring boot disk):"))
         info.append("="*40)
 
-        # Chama o utilitário centralizado
+        # Calls the centralized utility
         boot_disk_to_ignore = run_cmd(['/home/kali/forensic_utils.sh', '--boot-disk'])
         
         if boot_disk_to_ignore and not boot_disk_to_ignore.startswith("ERRO"):
@@ -613,7 +612,7 @@ class App(QMainWindow):
 
         return "\n".join(info)
 
-    # --- Funções de Evento e Navegação ---
+    # --- Event and Navigation Functions ---
 
     def go_to_page_1(self):
         self.stacked_widget.setCurrentIndex(0)
@@ -658,29 +657,29 @@ class App(QMainWindow):
         self.manual_frame.setVisible(self.selected_target == "manual_dir")
 
     def _update_manual_path(self, path):
-        """Função helper para atualizar a variável e o input."""
-        # ALTERAÇÃO 2: Atualizar o QLineEdit em vez do QLabel
+        """Helper function to update the variable and input."""
+        # ALTERATION 2: Update QLineEdit instead of QLabel
         if path:
             self.manual_selected_path = path
             self.manual_path_input.setText(path)
 
-    # --- FUNÇÃO MODIFICADA ---
+    # --- MODIFIED FUNCTION ---
     def _run_mount_script_if_needed(self):
         """
-        Chama o script de montagem em um terminal, se ele existir e
-        se ainda não foi chamado nesta sessão.
-        Retorna True se o script foi chamado com sucesso (ou já tinha sido),
-        False se houve erro ou o script não existe.
+        Calls the mount script in a terminal, if it exists and
+        if it hasn't been called in this session yet.
+        Returns True if the script was successfully called (or had already been),
+        False if there was an error or the script doesn't exist.
         """
         if self.mount_script_run:
             print(_("Mount script already executed in this session."))
             return True
 
         if not os.path.exists(MOUNT_SCRIPT_PATH):
-            # Apenas avisa no terminal, não mostra QMessageBox aqui
+            # Only warns in the terminal, does not show QMessageBox here
             print(_("Warning: Mount script not found at {}").format(MOUNT_SCRIPT_PATH))
-            self.mount_script_run = True # Marca como "rodado" para não tentar de novo
-            return True # Continua mesmo sem o script
+            self.mount_script_run = True # Marks as "run" to not try again
+            return True # Continues even without the script
 
         print(_("Executing mount_disks.sh..."))
         cmd_list = [
@@ -693,16 +692,15 @@ class App(QMainWindow):
         msg_start = _("Executing script to mount disks and check BitLocker...")
         msg_end = _("Script finished. This terminal will close automatically in 5 seconds (or press Enter to close now).")
         
-        # Concatenação cuidadosa para bash
+        # Careful concatenation for bash
         bash_cmd = f"echo '{msg_start}'; "
-        bash_cmd += f"{MOUNT_SCRIPT_PATH}; " # Script já tem sudo interno        
-        bash_cmd += f"echo; echo '{msg_end}'; read -t 5"
+        bash_cmd += f"{MOUNT_SCRIPT_PATH}; "
         cmd_list.append(bash_cmd)
 
         success = False
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor) # Cursor de espera
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor) # Wait cursor
         try:
-            # Usar subprocess.run para esperar o terminal fechar
+            # Use subprocess.run to wait for the terminal to close
             result = subprocess.run(cmd_list, check=True)
             success = (result.returncode == 0)
         except subprocess.CalledProcessError as e:
@@ -712,13 +710,13 @@ class App(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, _("Error"), _("Unexpected error calling mount script:\n{}").format(e))
         finally:
-             QApplication.restoreOverrideCursor() # Restaura o cursor
+             QApplication.restoreOverrideCursor() # Restores the cursor
 
         self.mount_script_run = True
         return success
 
     def browse_directory(self):
-        """Abre o diálogo nativo para selecionar *apenas* um diretório."""
+        """Opens the native dialog to select *only* a directory."""
         if not self._run_mount_script_if_needed():
             return
 
@@ -730,11 +728,11 @@ class App(QMainWindow):
         self._update_manual_path(path)
 
     def browse_file(self):
-        """Abre o diálogo nativo para selecionar *apenas* um arquivo."""
+        """Opens the native dialog to select *only* a file."""
         if not self._run_mount_script_if_needed():
             return
 
-        # CORREÇÃO DO BUG: Trocado '_' por '_filter' para não conflitar com a função de tradução
+        # BUG FIX: Changed '_' to '_filter' so it doesn't conflict with the translation function
         path, _filter = QFileDialog.getOpenFileName(
             self,
             _("Select Image File"),
@@ -744,10 +742,10 @@ class App(QMainWindow):
         self._update_manual_path(path)
 
     def start_processing(self):
-        # ALTERAÇÃO 3: Lê o caminho atual diretamente do campo de texto (remove espaços extras)
+        # ALTERATION 3: Reads the current path directly from the text field (removes extra spaces)
         self.manual_selected_path = self.manual_path_input.text().strip()
 
-        # 1. Validação
+        # 1. Validation
         path = self.manual_selected_path
 
         if self.selected_target == "manual_dir" and (not path or path == "/run/media"):
@@ -755,7 +753,7 @@ class App(QMainWindow):
                                  _("No path selected for manual mode.\nPlease select a directory or file."))
             return
 
-        # 3. Construção do Comando
+        # 3. Command Construction
         cmd_list = [
             'x-terminal-emulator',
             '-e',
@@ -766,12 +764,12 @@ class App(QMainWindow):
         bash_cmd = f"{self.executor_script} --profile {self.selected_profile} --target {self.selected_target}"
         
         if self.selected_target == "manual_dir":
-            # O shlex.quote() envolve o caminho com aspas simples e escapa qualquer 
-            # caractere nocivo, garantindo que o bash o trate apenas como texto.
+            # shlex.quote() wraps the path with single quotes and escapes any 
+            # harmful characters, ensuring bash treats it only as text.
             safe_path = shlex.quote(self.manual_selected_path)
             bash_cmd += f" --path {safe_path}"
 
-        # --- LINHA ATUALIZADA COM TIMEOUT DE 10 SEGUNDOS ---
+        # --- UPDATED LINE WITH 10 SECOND TIMEOUT ---
         msg_end = _("Processing finished. This terminal will close automatically in 10 seconds (or press Enter to close now).")
         bash_cmd += f"; echo; echo '{msg_end}'; read -t 10"
 
@@ -780,13 +778,13 @@ class App(QMainWindow):
         try:
             print(_("Executing: {}").format(' '.join(cmd_list)))
             subprocess.Popen(cmd_list)
-            self.close() # Fecha a GUI para economizar RAM
+            self.close() # Closes the GUI to save RAM
         except Exception as e:
             QMessageBox.critical(self, _("Error Starting"),
                                  _("Could not start terminal.\nCheck if 'x-terminal-emulator' is configured.\n\nError: {}").format(e))
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = App()
-    # A centralização foi movida para o construtor 'self.center_window()'
+    # Centering was moved to the constructor 'self.center_window()'
     window.show()
     sys.exit(app.exec())

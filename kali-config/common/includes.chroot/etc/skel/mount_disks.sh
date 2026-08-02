@@ -149,17 +149,15 @@ done <<< "$(lsblk -lno NAME,TYPE | grep -E 'part|disk|rom')"
 
 
 # --- 2. LDM Mount (Windows RAID) ---
-
 echo "$(gettext "Trying to mount LDM volumes (Windows RAID)...")"
 sudo ldmtool create all > /dev/null 2>&1
-sleep 2 
+sudo udevadm settle
 
-while read -r line; do
-    ldm_name=$(echo "$line" | awk '{print $1}') # e.g., ldm_vol_...
+while read -r ldm_name; do
     if [[ -n "$ldm_name" ]]; then
         mount_forensic "/dev/mapper/$ldm_name" "$MEDIA_DIR/$ldm_name"
     fi
-done <<< "$(lsblk -lno NAME,TYPE | grep 'dm')"
+done <<< "$(lsblk -lno NAME --filter "TYPE == 'ldm'")"
 
 
 # --- 3. BitLocker Partitions Mount ---
