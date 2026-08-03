@@ -1,0 +1,13 @@
+[Unit]
+# Set description and ensure it runs after udev populates device nodes
+Description=Forensic Disk Write-Protection at Boot
+After=local-fs.target systemd-udevd.service
+
+[Service]
+# Execute the script once during the boot process
+Type=oneshot
+ExecStart=/usr/local/bin/set_devices_read_only.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -4,5 +4,5 @@
 # (physical disk, partition, LVM volume, or LDM mapping), applying 
 # read-only mode. Ignores only optical media (sr*).
 
-SUBSYSTEM=="block", ACTION=="add", KERNEL!="sr*", \
-RUN+="/sbin/blockdev --setro /dev/%k"
+SUBSYSTEM=="block", ACTION=="add|change", KERNEL!="sr*", \
+RUN+="/usr/local/bin/udev_block_ro.sh %k"

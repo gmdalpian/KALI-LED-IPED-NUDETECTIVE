@@ -1,7 +1,7 @@
 #!/bin/bash
 # Sets disks to read-only using the blockdev command
 
-source /home/kali/forensic_utils.sh
+source /usr/local/bin/forensic_utils.sh
 
 root_system=$(get_boot_disk_name)
 

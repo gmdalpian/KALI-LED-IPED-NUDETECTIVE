@@ -561,7 +561,7 @@ class App(QMainWindow):
         info.append("="*40)
 
         # Calls the centralized utility
-        boot_disk_to_ignore = run_cmd(['/home/kali/forensic_utils.sh', '--boot-disk'])
+        boot_disk_to_ignore = run_cmd(['/usr/local/bin/forensic_utils.sh', '--boot-disk'])
         
         if boot_disk_to_ignore and not boot_disk_to_ignore.startswith("ERRO"):
             info.append(_("(Ignoring boot disk: {})").format(boot_disk_to_ignore))

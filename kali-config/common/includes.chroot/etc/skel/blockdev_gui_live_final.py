@@ -36,7 +36,7 @@ DESKTOP_FILE_PATH = "/home/kali/Desktop/Disk_Shield.desktop"
 ICON_GREEN = "disk_shield_green.svg"
 ICON_RED = "disk_shield_red.svg"
 # Path to the centralized library
-FORENSIC_UTILS = "/home/kali/forensic_utils.sh"
+FORENSIC_UTILS = "/usr/local/bin/forensic_utils.sh"
 # -----------------------------------
 
 class BlockDeviceManager(QWidget):
@@ -206,6 +206,11 @@ class BlockDeviceManager(QWidget):
                         
                     # Prevents duplicate entries for volumes spanning multiple disks (e.g., RAID/Spanned LDM)
                     if kname in seen_knames:
+                        continue
+                        
+                    # Filter out devices with no media (e.g., empty SD card readers or CD/DVD drives)
+                    device_size = node.get('size')
+                    if not device_size or int(device_size) == 0:
                         continue
                     
                     # Mark this device as seen

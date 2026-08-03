@@ -3,7 +3,7 @@
 export TEXTDOMAIN="mount_windows_shadows"
 export TEXTDOMAINDIR="/usr/share/locale"
 
-source /home/kali/forensic_utils.sh
+source /usr/local/bin/forensic_utils.sh
 
 /home/kali/mount_disks.sh
 

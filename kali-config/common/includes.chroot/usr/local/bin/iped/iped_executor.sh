@@ -8,7 +8,7 @@
 export TEXTDOMAIN="iped_executor"
 export TEXTDOMAINDIR="/usr/share/locale" # Adjust to your local path if testing
 
-source /home/kali/forensic_utils.sh
+source /usr/local/bin/forensic_utils.sh
 
 # --- Constants ---
 IPED_DIR="/usr/local/bin/iped"

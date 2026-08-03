@@ -3,7 +3,7 @@
 export TEXTDOMAIN="cria_arquivo_memoria_swap"
 export TEXTDOMAINDIR="/usr/share/locale"
 
-source /home/kali/forensic_utils.sh
+source /usr/local/bin/forensic_utils.sh
 
 triage=$(get_triage_device)
 

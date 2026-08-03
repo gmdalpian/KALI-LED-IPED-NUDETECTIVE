@@ -1,14 +1,15 @@
 #!/bin/bash
-# forensic_utils.sh - Biblioteca central para detecção de dispositivos de boot e triage
+# forensic_utils.sh - Central library for boot device detection and triage
 
-# Retorna o caminho físico da partição de boot (ex: /dev/sdb1)
+# Returns the physical path of the boot partition (e.g., /dev/sdb1)
 get_boot_phys_part() {
-    local boot_dev=$(findmnt -n -o SOURCE /run/live/medium)
+    # Added head -n 1 to avoid multiline output if mounted multiple times
+    local boot_dev=$(findmnt -n -o SOURCE /run/live/medium | head -n 1)
     
-    # Verifica se o boot é via Device Mapper (Ventoy)
+    # Checks if boot is via Device Mapper (Ventoy)
     if [[ "$boot_dev" == *"/mapper/ventoy"* ]]; then
-        # ADIÇÃO: 'head -n 1' garante que pegaremos apenas o primeiro mapeamento
-        # contornando a saída multilinha do modo GRUB2 do Ventoy
+        # 'head -n 1' ensures we only get the first mapping,
+        # bypassing multiline output in Ventoy's GRUB2 mode
         local map_id=$(sudo dmsetup table ventoy 2>/dev/null | head -n 1 | awk '{print $4}')
         
         if [[ -n "$map_id" ]]; then
@@ -22,10 +23,13 @@ get_boot_phys_part() {
     fi
 }
 
-# Retorna apenas o nome do disco pai do boot (ex: sdb)
+# Returns only the name of the boot parent disk (e.g., sdb)
 get_boot_disk_name() {
     local phys_part=$(get_boot_phys_part)
-    local disk_name=$(lsblk -no pkname "$phys_part" 2>/dev/null)
+    
+    # ADDED -d (--nodeps) to lsblk to prevent it from listing nested 
+    # devices (like loops or dm mappings) and returning multiple pknames
+    local disk_name=$(lsblk -nd -o pkname "$phys_part" 2>/dev/null)
     
     if [[ -z "$disk_name" ]]; then
         basename "$phys_part"
@@ -34,7 +38,7 @@ get_boot_disk_name() {
     fi
 }
 
-# Retorna o dispositivo correto para montagem do IPED-TRIAGE (resolve dm-X)
+# Returns the correct device for mounting IPED-TRIAGE (resolves dm-X)
 get_triage_device() {
     local root_disk=$(get_boot_disk_name)
     local triage_dev=""
@@ -59,12 +63,12 @@ get_triage_device() {
     echo "$triage_dev"
 }
 
-# Interface de linha de comando para testes
+# Command line interface for testing
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     case "$1" in
         --boot-phys) get_boot_phys_part ;;
         --boot-disk) get_boot_disk_name ;;
         --triage-dev) get_triage_device ;;
-        *) echo "Uso: $0 [--boot-phys | --boot-disk | --triage-dev]" ;;
+        *) echo "Usage: $0 [--boot-phys | --boot-disk | --triage-dev]" ;;
     esac
 fi
