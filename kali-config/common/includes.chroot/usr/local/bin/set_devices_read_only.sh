@@ -58,5 +58,11 @@ while read -r line ; do
     fi
 done <<< "$(lsblk -l -n -o KNAME,TYPE | grep -iE 'part|disk|rom|dm|ldm')"
 
+# [Keep your existing code above...]
+
 log "===== FORENSIC DISK WRITE-PROTECTION COMPLETED SUCCESSFULLY ====="
+
+# Create a flag file in RAM to signal udev that boot initialization is done
+touch /run/forensic_boot_done
+
 exit 0

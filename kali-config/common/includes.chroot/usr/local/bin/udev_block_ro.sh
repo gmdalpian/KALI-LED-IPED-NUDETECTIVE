@@ -17,9 +17,9 @@ log() {
 
 log "Event triggered for device: /dev/$DEVICE"
 
-# Abort if the Live environment is not fully mounted during boot (coldplug safety)
-if [ ! -d "/run/live/medium" ]; then
-    log "Live environment not ready. Skipping /dev/$DEVICE."
+# Check if the initial boot service has finished its job
+if [ ! -f "/run/forensic_boot_done" ]; then
+    log "Boot initialization not finished yet. Ignoring coldplug event for /dev/$DEVICE."
     exit 0
 fi
 
