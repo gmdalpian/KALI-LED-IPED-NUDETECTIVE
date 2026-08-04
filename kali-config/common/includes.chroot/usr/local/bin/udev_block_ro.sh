@@ -8,6 +8,21 @@ UTILS_SCRIPT="/usr/local/bin/forensic_utils.sh"
 # Ensure basic PATH is available in the udev environment
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
+# Advanced logging function for udev events
+log() {
+    local MSG="[Udev-Forensic-RO] $1"
+    # Send to kernel ring buffer (dmesg)
+    echo "$MSG" > /dev/kmsg 2>/dev/null
+}
+
+log "Event triggered for device: /dev/$DEVICE"
+
+# Abort if the Live environment is not fully mounted during boot (coldplug safety)
+if [ ! -d "/run/live/medium" ]; then
+    log "Live environment not ready. Skipping /dev/$DEVICE."
+    exit 0
+fi
+
 if [ -f "$UTILS_SCRIPT" ]; then
     # Source the centralized utility library
     source "$UTILS_SCRIPT"
@@ -22,10 +37,18 @@ if [ -f "$UTILS_SCRIPT" ]; then
         # Check if the triggered device matches any boot component
         if echo "$boot_components" | grep -w -q "$DEVICE"; then
             # The device is part of the boot disk, exit cleanly without locking
+            log "Device /dev/$DEVICE is part of the boot drive. Ignoring."
             exit 0
         fi
     fi
+else
+    log "WARNING: $UTILS_SCRIPT not found. Proceeding with default lock."
 fi
 
 # Apply read-only mode to non-boot devices
-/sbin/blockdev --setro "/dev/$DEVICE"
+log "Applying read-only (RO) lock to /dev/$DEVICE"
+if /sbin/blockdev --setro "/dev/$DEVICE"; then
+    log "Success: /dev/$DEVICE is now read-only."
+else
+    log "Error: Failed to lock /dev/$DEVICE."
+fi

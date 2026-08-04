@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+echo "[+] ===== Enable forensic-ro.service to run automatically on every boot ====="
+sudo systemctl enable forensic-ro.service

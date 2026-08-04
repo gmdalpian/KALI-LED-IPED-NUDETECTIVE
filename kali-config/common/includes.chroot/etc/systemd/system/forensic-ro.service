@@ -8,6 +8,8 @@ After=local-fs.target systemd-udevd.service
 Type=oneshot
 ExecStart=/usr/local/bin/set_devices_read_only.sh
 RemainAfterExit=yes
+StandardOutput=journal+console
+StandardError=journal+console
 
 [Install]
 WantedBy=multi-user.target
