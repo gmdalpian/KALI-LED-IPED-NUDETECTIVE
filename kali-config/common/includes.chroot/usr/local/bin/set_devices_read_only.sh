@@ -53,8 +53,7 @@ while read -r line ; do
        log "-> Locking device (RO): /dev/$disk"
        sudo blockdev --setro "/dev/$disk" >> "$LOG_FILE" 2>&1
     else
-       log "-> Skipping boot device, setting (RW): /dev/$disk"
-       sudo blockdev --setrw "/dev/$disk" >> "$LOG_FILE" 2>&1
+       log "-> Device is part of the boot drive, ignoring: /dev/$disk"
     fi
 done <<< "$(lsblk -l -n -o KNAME,TYPE | grep -iE 'part|disk|rom|dm|ldm')"
 
