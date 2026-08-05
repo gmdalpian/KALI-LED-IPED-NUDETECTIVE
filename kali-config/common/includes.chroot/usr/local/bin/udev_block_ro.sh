@@ -8,9 +8,15 @@ UTILS_SCRIPT="/usr/local/bin/forensic_utils.sh"
 # Ensure basic PATH is available in the udev environment
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
+LOG_FILE="/var/log/udev_block-ro.log"
+
 # Advanced logging function for udev events
 log() {
     local MSG="[Udev-Forensic-RO] $1"
+    
+    # Log to file with timestamp
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $MSG" >> "$LOG_FILE"
+    
     # Send to kernel ring buffer (dmesg)
     echo "$MSG" > /dev/kmsg 2>/dev/null
 }
