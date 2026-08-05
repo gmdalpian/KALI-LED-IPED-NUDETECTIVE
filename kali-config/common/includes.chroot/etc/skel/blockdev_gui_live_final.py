@@ -309,7 +309,7 @@ class BlockDeviceManager(QWidget):
         action_en = "Block Write (RO)" if ro_state == 1 else "Allow Write (RW)"
         action = _(action_en)
         
-        msg = _("Do you want to {action} on {device}?").format(action=action.lower(), device=name)
+        msg = _("Do you want to {action} on /dev/{device}?").format(action=action.lower(), device=name)
         reply = QMessageBox.question(self, action, msg, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         
         if reply == QMessageBox.StandardButton.No: return
