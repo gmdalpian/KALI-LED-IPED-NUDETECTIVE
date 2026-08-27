@@ -52,7 +52,6 @@ dislocker
 xmount
 adb
 vlc-bin
-libvshadow-utils
 openjdk-11-jdk
 zenity
 hwinfo

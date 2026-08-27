@@ -33,7 +33,7 @@ while read line ; do
 			sudo mkdir -p $MEDIA_DIR/vss_$disk
 			for vss in $(sudo ls /vss/vss_$disk); do
 				sudo mkdir -p $MEDIA_DIR/vss_$disk/$vss
-				sudo mount -o ro /vss/vss_$disk/$vss $MEDIA_DIR/vss_$disk/$vss
+				sudo mount -t ntfs -o ro /vss/vss_$disk/$vss $MEDIA_DIR/vss_$disk/$vss
 			done			
 		fi
     fi
@@ -54,7 +54,7 @@ for dislockerpart in $(sudo ls /dislocker 2>/dev/null); do
 		sudo mkdir -p $MEDIA_DIR/vss_$dislockerpart
 		for vss in $(sudo ls /vss/vss_$dislockerpart); do
 			sudo mkdir -p $MEDIA_DIR/vss_$dislockerpart/$vss
-			sudo mount -o ro /vss/vss_$dislockerpart/$vss $MEDIA_DIR/vss_$dislockerpart/$vss
+			sudo mount -t ntfs -o ro /vss/vss_$dislockerpart/$vss $MEDIA_DIR/vss_$dislockerpart/$vss
 		done			
 	fi
 done	
