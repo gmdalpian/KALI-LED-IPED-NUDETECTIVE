@@ -42,24 +42,38 @@ get_boot_disk_name() {
 get_triage_device() {
     local root_disk=$(get_boot_disk_name)
     local triage_dev=""
-    local found=false
 
     while read -r part_name ; do
+        # 1. Pula imediatamente qualquer partição que não seja do disco de boot
+        if [[ "$part_name" != *"$root_disk"* ]]; then
+            continue
+        fi
+
         local current_phys="/dev/$part_name"
         if sudo blkid "$current_phys" | grep -q 'IPED-TRIAGE'; then
+            # 2. Reinicia a variável found apenas quando a partição correta é avaliada
+            local found=false
             local holders_dir="/sys/class/block/$part_name/holders"
+            
             if [ -d "$holders_dir" ] && [ "$(ls -A "$holders_dir")" ]; then
                 for holder in $(ls "$holders_dir"); do
                     if sudo blkid "/dev/$holder" | grep -q 'IPED-TRIAGE'; then
                         triage_dev="/dev/$holder"
-                        found=true; break
+                        found=true
+                        break
                     fi
                 done
             fi
-            if ! $found; then triage_dev="$current_phys"; found=true; fi
-            [[ "$part_name" == *"$root_disk"* ]] && break
+            
+            if ! $found; then 
+                triage_dev="$current_phys"
+            fi
+            
+            # 3. Interrompe o laço com segurança após encontrar e definir a partição no disco raiz
+            break 
         fi
     done <<< "$(lsblk -lno NAME,TYPE | grep part | awk '{print $1}')"
+    
     echo "$triage_dev"
 }
 
