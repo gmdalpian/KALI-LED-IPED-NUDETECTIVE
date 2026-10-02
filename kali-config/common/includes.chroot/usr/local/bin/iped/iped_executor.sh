@@ -20,9 +20,10 @@ MEDIA_DIR="/run/media"
 GPU_DETECT_SCRIPT="/usr/local/bin/gpu-detect.sh"
 
 # --- Python Environment Variables (Venvs) ---
-VENV_CUDA="/opt/venv-cuda/bin/activate"
-VENV_CUDA_LEGACY="/opt/venv-cuda-legacy/bin/activate"
-VENV_ROCM="/opt/venv-rocm/bin/activate"
+VENV_CPU="/opt/venv_cpu/bin/activate"
+VENV_CUDA="/opt/venv_cuda/bin/activate"
+VENV_CUDA_LEGACY="/opt/venv_cuda_legacy/bin/activate"
+VENV_ROCM="/opt/venv_rocm/bin/activate"
 
 # --- Global Variables ---
 CONTINUE_PROCESSING=false
@@ -442,11 +443,16 @@ if [ -f "$GPU_DETECT_SCRIPT" ] && ! grep -q "nonvidia" /proc/cmdline; then
     if [ -n "$CANDIDATO" ] && [ -f "$CANDIDATO" ]; then
         PYTHON_TARGET="$CANDIDATO"
         printf "$(gettext "Hardware Detected: %s (%s) - Driver: %s")\n" "$VENDOR" "$ARCH" "$DRIVER"
-        printf "$(gettext "Active Environment: %s")\n" "$PYTHON_TARGET"
-    else
-        printf "$(gettext "CPU Mode: Detected hardware (%s %s) does not support stable acceleration.")\n" "$VENDOR" "$ARCH"
-    fi
+        printf "$(gettext "Active Environment: %s")\n" "$PYTHON_TARGET" 
+    fi	
 fi
+
+# Python environment for CPU
+if [[ -z "$PYTHON_TARGET" ]]; then
+	printf "$(gettext "CPU Mode: Detected hardware (%s %s) does not support stable acceleration.")\n" "$VENDOR" "$ARCH"
+	PYTHON_TARGET="$VENV_CPU"
+fi
+
 # =========================================================
     
 # =========================================================

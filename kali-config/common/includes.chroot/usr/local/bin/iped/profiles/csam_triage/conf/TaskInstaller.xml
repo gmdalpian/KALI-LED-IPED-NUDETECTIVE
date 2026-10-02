@@ -41,6 +41,7 @@
     <task class="iped.engine.task.PhotoDNALookup"></task>
     <task script="NSFWNudityDetectTask.py"></task>
     <task script="FaceRecognitionTask.py"></task>
+    <task script="AgeEstimationTask.py"></task>
     <task script="SearchHardwareWallets.py"></task>
     <task script="CSAMDetectorTask.py"></task>
     

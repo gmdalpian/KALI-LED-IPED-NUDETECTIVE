@@ -61,19 +61,19 @@ do_copy() {
     fi
 
     # 3. Processamento das bibliotecas Python (scripts de IA/Forense)
-    mkdir -p ${BASE_DIR}/kali-live/kali-config/common/includes.chroot/usr/local/lib
+    mkdir -p ${BASE_DIR}/kali-live/kali-config/common/includes.chroot/opt
     check_status "Criação do diretório lib para Python"
     
     for f in ${EXTERNAL_DISK}/python/PYTHON*; do
         if [ -e "$f" ]; then
-            tar -vzxf "$f" -C ${BASE_DIR}/kali-live/kali-config/common/includes.chroot/usr/local/lib
+            tar -vzxf "$f" -C ${BASE_DIR}/kali-live/kali-config/common/includes.chroot/opt
             check_status "Extração da biblioteca Python: $f"
         fi
     done	
 
     if [ "$NVIDIA_FLAG" = true ]; then
-        mkdir -p ${BASE_DIR}/kali-live/kali-config/common/includes.chroot/opt
-        check_status "Criação do diretório opt para NVIDIA"
+        # mkdir -p ${BASE_DIR}/kali-live/kali-config/common/includes.chroot/opt
+        # check_status "Criação do diretório opt para NVIDIA"
         
         for f in ${EXTERNAL_DISK}/python/NVIDIA*; do
             if [ -e "$f" ]; then
@@ -152,16 +152,15 @@ do_build() {
     cd ${BASE_DIR}/kali-live || exit 1
 
     # bootstrap-packages essencial para o APT lidar com HTTPS no início do build
-    time ./build.sh \
-      --verbose \
-      --distribution kali-last-snapshot \
-      --version $RELEASE
+    time sudo ./build.sh \
+      -b kali-last-snapshot \
+      -x $RELEASE
     
     check_status "Compilação da ISO (build.sh)"
 
     # Gestão do arquivo final
     ISO_NAME="kali-linux-$RELEASE-live-amd64.iso"
-    ISO_PATH="${BASE_DIR}/kali-live/images/${ISO_NAME}"
+    ISO_PATH="${BASE_DIR}/kali-live/output/${ISO_NAME}"
 
     if [ -f "$ISO_PATH" ]; then
         md5sum "$ISO_PATH" > "${ISO_PATH}.md5"

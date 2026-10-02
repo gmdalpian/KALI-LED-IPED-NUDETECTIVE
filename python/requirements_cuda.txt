@@ -1,0 +1,11 @@
+numpy==1.26.4
+jep==4.0.3
+face_recognition
+opencv-python==4.11.0.86
+transformers
+onnxruntime
+timm
+
+--extra-index-url https://download.pytorch.org/whl/cu132
+torch
+torchvision

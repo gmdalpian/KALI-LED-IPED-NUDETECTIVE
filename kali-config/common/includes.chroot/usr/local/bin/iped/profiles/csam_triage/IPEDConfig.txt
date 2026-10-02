@@ -33,4 +33,6 @@ enableVideoThumbs = true
 enableDocThumbs = false
 enableHTMLReport = false
 enableCSAMDetector = true
+enableFaceRecognition = false
+enableAgeEstimation = false
 
