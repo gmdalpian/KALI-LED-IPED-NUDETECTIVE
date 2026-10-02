@@ -20,13 +20,15 @@
 <properties>
 
     <parsers>
-        <parser class="iped.parsers.external.CompositeExternalParser"></parser>
+        <!-- <parser class="iped.parsers.external.CompositeExternalParser"></parser> -->
 
         <parser class="org.apache.tika.parser.apple.AppleSingleFileParser"></parser>
-        <parser class="org.apache.tika.parser.apple.PListParser"></parser>
-        <parser class="org.apache.tika.parser.asm.ClassParser"></parser>
+        <parser class="iped.parsers.plist.PListParser"></parser>
+        <parser class="iped.parsers.plist.NSKeyedArchiverParser"></parser>
+        <!-- <parser class="org.apache.tika.parser.apple.PListParser"></parser> -->
+<!--         <parser class="org.apache.tika.parser.asm.ClassParser"></parser>
         <parser class="org.apache.tika.parser.audio.AudioParser"></parser>
-        <parser class="org.apache.tika.parser.audio.MidiParser"></parser>
+        <parser class="org.apache.tika.parser.audio.MidiParser"></parser> -->
         <!--throws exception on most files
         <parser class="org.apache.tika.parser.crypto.Pkcs7Parser"></parser-->
         <parser class="iped.parsers.evtx.EvtxParser">
@@ -35,25 +37,26 @@
                 <param name="maxEventPerItem" type="int">100</param>
             </params>
         </parser>
-        <parser class="org.apache.tika.parser.crypto.TSDParser"></parser>
+        <!-- <parser class="org.apache.tika.parser.crypto.TSDParser"></parser> -->
+        <parser class="iped.parsers.emule.EmuleCollectionParser"></parser>
         <parser class="org.apache.tika.parser.csv.TextAndCSVParser"></parser>
-        <parser class="org.apache.tika.parser.dwg.DWGParser"></parser>
-        <parser class="org.apache.tika.parser.epub.EpubParser"></parser>
+<!--         <parser class="org.apache.tika.parser.dwg.DWGParser"></parser>
+        <parser class="org.apache.tika.parser.epub.EpubParser"></parser> -->
         <!--Just extracts metadata. Used below in MultipleParser
         <parser class="org.apache.tika.parser.executable.ExecutableParser"></parser>-->
-        <parser class="org.apache.tika.parser.feed.FeedParser"></parser>
+        <!-- <parser class="org.apache.tika.parser.feed.FeedParser"></parser> -->
         <!-- Disabled, I "think" font parsers caused crashes a long time ago, anyway, we don't need them
         <parser class="org.apache.tika.parser.font.AdobeFontMetricParser"></parser>
         <parser class="org.apache.tika.parser.font.TrueTypeParser"></parser>-->
         <parser class="org.apache.tika.parser.html.HtmlParser"></parser>
-        <parser class="org.apache.tika.parser.hwp.HwpV5Parser"></parser>
-        <parser class="org.apache.tika.parser.image.BPGParser"></parser>
+<!--         <parser class="org.apache.tika.parser.hwp.HwpV5Parser"></parser>
+        <parser class="org.apache.tika.parser.image.BPGParser"></parser> -->
         <!--<parser class="org.apache.tika.parser.image.ImageParser"></parser>-->
         <!--<parser class="org.apache.tika.parser.image.PSDParser"></parser>-->
         <!--<parser class="org.apache.tika.parser.image.TiffParser"></parser>-->
         <!--<parser class="org.apache.tika.parser.image.WebPParser"></parser>-->
         <!--<parser class="org.apache.tika.parser.image.HeifParser"></parser>-->
-        <parser class="org.apache.tika.parser.iptc.IptcAnpaParser"></parser>
+        <!-- <parser class="org.apache.tika.parser.iptc.IptcAnpaParser"></parser> -->
         <parser class="org.apache.tika.parser.iwork.IWorkPackageParser"></parser>
         <parser class="org.apache.tika.parser.iwork.iwana.IWork13PackageParser"></parser>
         <parser class="org.apache.tika.parser.iwork.iwana.IWork18PackageParser"></parser>
@@ -88,9 +91,9 @@
         <parser class="org.apache.tika.parser.microsoft.ooxml.xwpf.ml2006.Word2006MLParser"></parser>
         <parser class="org.apache.tika.parser.microsoft.xml.WordMLParser"></parser>
         <parser class="org.apache.tika.parser.microsoft.xml.SpreadsheetMLParser"></parser>
-        <parser class="org.apache.tika.parser.mif.MIFParser"></parser>
+<!--         <parser class="org.apache.tika.parser.mif.MIFParser"></parser>
         <parser class="org.apache.tika.parser.mp3.Mp3Parser"></parser>
-        <parser class="org.apache.tika.parser.mp4.MP4Parser"></parser>
+        <parser class="org.apache.tika.parser.mp4.MP4Parser"></parser> -->
         <!-- we use strings parser instead of these scientific data parsers
         <parser class="org.apache.tika.parser.hdf.HDFParser"></parser>
         <parser class="org.apache.tika.parser.netcdf.NetCDFParser"></parser>-->
@@ -109,8 +112,8 @@
         <parser class="org.apache.tika.parser.wordperfect.WordPerfectParser"></parser>
         <!-- We have our own XMLParser that uses this internally
         <parser class="org.apache.tika.parser.xml.DcXMLParser"></parser>-->
-        <parser class="org.apache.tika.parser.dif.DIFParser"></parser>
-        <parser class="org.apache.tika.parser.xml.FictionBookParser"></parser>
+<!--         <parser class="org.apache.tika.parser.dif.DIFParser"></parser>
+        <parser class="org.apache.tika.parser.xml.FictionBookParser"></parser> -->
         <parser class="org.apache.tika.parser.microsoft.chm.ChmParser"></parser>
         <!-- we uses strings parser for this
         <parser class="org.apache.tika.parser.code.SourceCodeParser"></parser>
@@ -125,7 +128,7 @@
         <parser class="org.apache.tika.parser.grib.GribParser"></parser>-->
         <!-- we have our own sqlite parser fork
         <parser class="org.apache.tika.parser.jdbc.SQLite3Parser"></parser>-->
-        <parser class="org.apache.tika.parser.indesign.IDMLParser"></parser>
+        <!-- <parser class="org.apache.tika.parser.indesign.IDMLParser"></parser> -->
         <!-- ontology parser, not thread-safe, relies on local file system structure as of 2021-04-05
         <parser class="org.apache.tika.parser.isatab.ISArchiveParser"></parser>-->
         <!-- this parses iso19139+xml files and uses the big opengis and apache sis libs excluded by us
@@ -136,27 +139,29 @@
         <parser class="org.apache.tika.parser.external.CompositeExternalParser"></parser> -->
         <!-- this uses a REST service to parse PDF journals
         <parser class="org.apache.tika.parser.journal.JournalParser"></parser>-->
-        <parser class="org.apache.tika.parser.image.ICNSParser"></parser>
+        <!-- <parser class="org.apache.tika.parser.image.ICNSParser"></parser> -->
         <!--TODO: compare with our old DBF parser and maybe switch to this
         <parser class="org.apache.tika.parser.dbf.DBFParser"></parser>-->
         <!-- these are related to localization xliff+zip and xliff+xml files
         <parser class="org.apache.tika.parser.xliff.XLIFF12Parser"></parser>
         <parser class="org.apache.tika.parser.xliff.XLZParser"></parser>-->
-        <parser class="org.apache.tika.parser.prt.PRTParser"></parser>
+        <!-- <parser class="org.apache.tika.parser.prt.PRTParser"></parser> -->
         <parser class="org.apache.tika.parser.EmptyParser">
             <mime>application/vnd.rn-realmedia</mime>
             <mime>application/java-archive</mime>
             <mime>audio/ilbc</mime>
+            <mime>application/x-tika-unix-dump</mime>
+            <mime>application/x-cpio</mime>			
         </parser>
 
-        <parser class="org.gagravarr.tika.FlacParser"></parser>
+<!--         <parser class="org.gagravarr.tika.FlacParser"></parser>
         <parser class="org.gagravarr.tika.OggParser"></parser>
         <parser class="org.gagravarr.tika.VorbisParser"></parser>
         <parser class="org.gagravarr.tika.OpusParser"></parser>
         <parser class="org.gagravarr.tika.SpeexParser"></parser>
-        <parser class="org.gagravarr.tika.TheoraParser"></parser>
+        <parser class="org.gagravarr.tika.TheoraParser"></parser> -->
 
-        <parser class="iped.parsers.ocr.OCRParser"></parser>
+        <!-- <parser class="iped.parsers.ocr.OCRParser"></parser> -->
 
         <parser class="iped.parsers.misc.MultipleParser">
             <mime>image/jpeg</mime>
@@ -166,7 +171,7 @@
             </params>
         </parser>
 
-        <parser class="iped.parsers.misc.MultipleParser">
+        <!-- <parser class="iped.parsers.misc.MultipleParser">
             <mime>image/bmp</mime>
             <mime>image/gif</mime>
             <mime>image/png</mime>
@@ -251,7 +256,7 @@
                     iped.parsers.standard.RawStringParser;
                 </param>
             </params>
-        </parser>
+        </parser> -->
 
         <parser class="iped.parsers.browsers.firefox.FirefoxSqliteParser">
             <params>
@@ -266,8 +271,8 @@
         <parser class="iped.parsers.database.EDBParser"></parser>
         <parser class="iped.parsers.registry.RegRipperParser"></parser>
         <parser class="iped.parsers.browsers.ie.IndexDatParser"></parser>
-        <!--parser class="iped.parsers.compress.PackageParser"></parser>
-        <parser class="iped.parsers.compress.SevenZipParser"></parser-->
+<!--         <parser class="iped.parsers.compress.PackageParser"></parser>
+        <parser class="iped.parsers.compress.SevenZipParser"></parser> -->
         <parser class="iped.parsers.compress.LZFSEParser"></parser>
         <parser class="iped.parsers.misc.XMLParser">
             <mime-exclude>image/svg+xml</mime-exclude>
@@ -279,13 +284,13 @@
         <parser class="iped.parsers.mail.IncrediMailParser"></parser>
         <parser class="iped.parsers.mail.OutlookPSTParser">
             <params>
-                <param name="recoverDeleted" type="bool">true</param>
+                <param name="recoverDeleted" type="bool">false</param>
                 <param name="useLibpffParser" type="bool">true</param>
             </params>
         </parser>
         <parser class="iped.parsers.mail.OutlookDBXParser"></parser>
         <parser class="iped.parsers.database.XBaseParser"></parser>
-        <parser class="iped.parsers.sqlite.SQLite3Parser"></parser>
+        <!-- <parser class="iped.parsers.sqlite.SQLite3Parser"></parser> -->
         <parser class="iped.parsers.usnjrnl.UsnJrnlParser">
             <params>
                 <param name="extractEntries" type="bool">false</param>
@@ -320,12 +325,23 @@
                 <param name="extractMediasAsFiles" type="bool">false</param>
             </params>
         </parser>
-        <parser class="iped.parsers.ufed.UFEDChatParser">
-            <!--<mime-exclude>application/x-ufed-chat-whatsapp</mime-exclude>-->
+        <parser class="iped.parsers.ufed.UfedChatParser">
             <params>
                 <param name="minChatSplitSize" type="int">6000000</param>
+                <param name="extractMessages" type="bool">true</param>
+                <param name="ignoreEmptyChats" type="bool">false</param>
+                <param name="extractActivityLogs" type="bool">true</param>
             </params>
         </parser>
+        <parser class="iped.parsers.ufed.UfedMessageParser">
+            <params>
+                <param name="extractActivityLogs" type="bool">true</param>
+                <param name="extractAttachments" type="bool">true</param>
+                <param name="extractSharedContacts" type="bool">true</param>
+            </params>
+        </parser>
+        <parser class="iped.parsers.ufed.UfedAccountableParser"></parser>
+        <parser class="iped.parsers.ufed.UfedEmailParser"></parser>
 
         <parser class="iped.parsers.emule.KnownMetParser">
             <params>
@@ -354,28 +370,32 @@
         <parser class="iped.parsers.bittorrent.BitTorrentResumeDatEntryParser"></parser>
         <parser class="iped.parsers.bittorrent.BitTorrentGenericDatParser"></parser>
         <parser class="iped.parsers.bittorrent.TorrentFileParser"></parser>
+        <parser class="iped.parsers.bittorrent.TransmissionResumeParser"></parser>
         <parser class="iped.parsers.lnk.LNKShortcutParser"></parser>
-        <parser class="iped.parsers.misc.GenericOLEParser"></parser>
+        <!-- <parser class="iped.parsers.misc.GenericOLEParser"></parser> -->
         <parser class="iped.parsers.misc.OFXParser"></parser>
         <parser class="iped.parsers.misc.OFCParser"></parser>
         <parser class="iped.parsers.misc.PDFTextParser"></parser>
-        <parser class="iped.parsers.video.FLVParserWrapper"></parser>
-        <parser class="iped.parsers.video.EmptyVideoParser"></parser>
+<!--         <parser class="iped.parsers.video.FLVParserWrapper"></parser>
+        <parser class="iped.parsers.video.EmptyVideoParser"></parser> -->
         <parser class="iped.parsers.standard.RawStringParser">
             <mime>application/skype</mime>
             <mime>application/irpf</mime>
+            <mime>application/x-tika-msoffice</mime>
             <mime>application/x-nls</mime>
+            <mime>application/x-edb</mime>
+            <mime>application/x-sqlite3</mime>
         </parser>
-        <parser class="iped.geo.parsers.GeofileParser"></parser>
+        <!-- <parser class="iped.geo.parsers.GeofileParser"></parser> -->
         <parser class="iped.parsers.winx.WinXTimelineParser"></parser>
         <parser class="iped.parsers.gdrive.GDriveMainParser"></parser>
         <parser class="iped.parsers.browsers.firefox.FirefoxSavedSessionParser"></parser>
         <parser class="iped.parsers.eventtranscript.EventTranscriptParser"></parser>
 
-        <parser class="iped.parsers.python.PythonParser"></parser>
+        <!-- <parser class="iped.parsers.python.PythonParser"></parser> -->
         <parser class="iped.parsers.mail.win10.Win10MailParser"></parser>
         <parser class="iped.parsers.discord.DiscordParser"></parser>
-        <parser class="iped.parsers.apk.APKParser"></parser>
+        <!-- <parser class="iped.parsers.apk.APKParser"></parser> -->
         <parser class="iped.parsers.vlc.VLCIniParser"></parser>
 
     </parsers>

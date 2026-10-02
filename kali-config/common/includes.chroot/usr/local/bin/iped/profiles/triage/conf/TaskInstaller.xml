@@ -39,9 +39,13 @@
     <task class="iped.engine.task.similarity.ImageSimilarityTask"></task>
     <task class="iped.engine.task.PhotoDNATask"></task>
     <task class="iped.engine.task.PhotoDNALookup"></task>
+    <task class="iped.engine.task.RemoteImageClassifierTask"></task>
     <task script="NSFWNudityDetectTask.py"></task>
     <task script="FaceRecognitionTask.py"></task>
+    <task script="AgeEstimationTask.py"></task>
     <task script="SearchHardwareWallets.py"></task>
+	<task script="CSAMDetectorTask.py"></task>
+    <task script="RefineMetadataTask.js"></task>   
     
     <!--Carving must be installed before IndexTask because it sets hasChildren property in parent items-->
     <task class="iped.engine.task.carver.LedCarveTask"></task>

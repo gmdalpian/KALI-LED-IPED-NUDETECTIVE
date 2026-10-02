@@ -32,3 +32,5 @@ enableSearchHardwareWallets = true
 enableVideoThumbs = false
 enableDocThumbs = false
 enableHTMLReport = false
+enableQRCode = false
+enableOCR = false
