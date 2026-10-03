@@ -14,7 +14,8 @@ import locale
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QLineEdit, QFileDialog, QMessageBox,
-    QFrame, QButtonGroup, QToolButton, QSizePolicy, QStackedWidget
+    QFrame, QButtonGroup, QToolButton, QSizePolicy, QStackedWidget,
+    QCheckBox
 )
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 from PyQt6.QtCore import Qt, QSize
@@ -111,7 +112,7 @@ class App(QMainWindow):
 
     def init_ui(self):
         # --- Load Application Icon ---
-        app_icon_path = os.path.join(self.script_dir, "analisador.png")
+        app_icon_path = "/home/kali/Pictures/analisador.png"
         if os.path.exists(app_icon_path):
             self.setWindowIcon(QIcon(app_icon_path))
         else:
@@ -232,12 +233,18 @@ class App(QMainWindow):
         self.profile_details_desc.setObjectName("DetailsDescription")
         self.profile_details_desc.setWordWrap(True)
 
+        self.led_checkbox = QCheckBox(_("Expand search (History, P2P and Suggestive Names) - additional processing time"))
+        self.led_checkbox.setObjectName("LedCheckbox")
+        self.led_checkbox.setVisible(False)
+
         right_layout.addSpacing(20)
         right_layout.addWidget(self.profile_details_icon)
         right_layout.addSpacing(10)
         right_layout.addWidget(self.profile_details_title)
         right_layout.addSpacing(15)
         right_layout.addWidget(self.profile_details_desc)
+        right_layout.addSpacing(20) # ESPAÇAMENTO ADICIONADO AQUI
+        right_layout.addWidget(self.led_checkbox)
         right_layout.addStretch()
         page_layout.addWidget(right_col, 1) # '1' makes this column stretch
 
@@ -456,6 +463,22 @@ class App(QMainWindow):
             QLineEdit#ManualPathInput:focus {
                 border-color: #03a9f4; /* Blue when clicked inside */
             }
+            
+            /* MODIFICADO: Estilo limpo forçado para o Checkbox desativar o fundo escuro do SO */
+            QCheckBox#LedCheckbox {
+                color: #212121;
+            }
+            QCheckBox#LedCheckbox::indicator {
+                width: 16px;
+                height: 16px;
+                background-color: white;
+                border: 1px solid #b0bec5;
+                border-radius: 3px;
+            }
+            QCheckBox#LedCheckbox::indicator:checked {
+                background-color: #03a9f4;
+                border: 1px solid #03a9f4;
+            }
         """)
 
     def open_help_manual(self):
@@ -641,6 +664,9 @@ class App(QMainWindow):
         self.profile_details_desc.setText(info['description'])
         icon_pixmap = QIcon.fromTheme(info['icon']).pixmap(QSize(64, 64))
         self.profile_details_icon.setPixmap(icon_pixmap)
+        
+        if hasattr(self, 'led_checkbox'):
+            self.led_checkbox.setVisible(key == "csam_triage")
 
     def update_target_details(self, button, checked):
         if not checked:
@@ -761,7 +787,11 @@ class App(QMainWindow):
             '-c',
         ]
 
-        bash_cmd = f"{self.executor_script} --profile {self.selected_profile} --target {self.selected_target}"
+        final_profile = self.selected_profile
+        if self.selected_profile == "csam_triage" and hasattr(self, 'led_checkbox') and self.led_checkbox.isChecked():
+            final_profile = "csam_led_triage"
+
+        bash_cmd = f"{self.executor_script} --profile {final_profile} --target {self.selected_target}"
         
         if self.selected_target == "manual_dir":
             # shlex.quote() wraps the path with single quotes and escapes any 

@@ -193,3 +193,9 @@ msgstr "Erro ao Iniciar"
 
 msgid "Could not start terminal.\nCheck if 'x-terminal-emulator' is configured.\n\nError: {}"
 msgstr "Não foi possível iniciar o terminal.\nVerifique se 'x-terminal-emulator' está configurado.\n\nErro: {}"
+
+msgid "Enter or paste the path here..."
+msgstr "Digite ou cole o caminho aqui..."
+
+msgid "Expand search (History, P2P and Suggestive Names) - additional processing time"
+msgstr "Expandir busca (Histórico, P2P e Nomes Sugestivos) - tempo de processamento adicional"

@@ -159,7 +159,7 @@ setup_output_dir() {
             fi
 
             # --- SWAP Logic ---
-            if [ "$PROFILE" == "csam_triage" ] || [ "$PROFILE" == "triage" ]; then
+            if [ "$PROFILE" == "csam_triage" ] || [ "$PROFILE" == "csam_led_triage" ] || [ "$PROFILE" == "triage" ]; then
                 if [ "$(cat /proc/swaps | wc -l)" -le 1 ]; then
                     local swap_file_path="$OUTPUT_DIR_TRIAGE_BASE/swapfile"
                     if test -f "$swap_file_path"; then
@@ -197,7 +197,7 @@ setup_output_dir() {
         DESKTOP_FILE="IPED-Caso.desktop"
         KEYWORD_FILE_PATH="$IPED_DIR/palavras-chave.txt"
 		
-        if [ "$PROFILE" == "csam_triage" ] || [ "$PROFILE" == "triage" ]; then
+		if [ "$PROFILE" == "csam_triage" ] || [ "$PROFILE" == "csam_led_triage" ] || [ "$PROFILE" == "triage" ]; then        
             printf "$(gettext "WARNING: Profile '%s' without Triage partition may cause out of memory.")\n" "$PROFILE"
             
             zenity_warn_title=$(gettext "Triage Partition Not Found")
