@@ -347,8 +347,9 @@ sub appWin81 {
 	my $ct = 0;
 #	my $ofs = unpack("V",substr($data,0,4));
 	my $ofs = 0x80;
+	my $loop = 0;
 	
-	while ($ofs < $len) {
+	while ($ofs < $len && $loop++ < 10000000) {
 		$tag = substr($data,$ofs,4);
 		if ($tag eq "10ts") {
 			

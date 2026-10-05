@@ -736,6 +736,7 @@ sub parseControlPanelEntry {
 #-----------------------------------------------------------
 sub parseFolderEntry {
 	my $data = shift;
+	my $data_length = length($data);
 	my %item = ();
 	
 	$item{type} = unpack("C",substr($data,2,1));
@@ -814,6 +815,9 @@ sub parseFolderEntry {
 			}
 			else {
 				$cnt++;
+				if (($ofs + $cnt) > $data_length) {
+					return %item;
+				}
 			}
 		}
 		$item{extver} = unpack("v",substr($data,$ofs + $cnt - 4,2));

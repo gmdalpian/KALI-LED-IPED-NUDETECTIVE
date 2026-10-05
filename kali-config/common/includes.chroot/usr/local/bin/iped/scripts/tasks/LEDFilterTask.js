@@ -48,9 +48,9 @@ var TermosSuspeitos = ["adolescente","angel","babies","baby","bambin","bebe","be
 
 var TermosIgnorar = ["ssdpapi","cateenrollment","angel64","angelu64","angel264","depthconvert","changelog","digirlpt","certificateencod","certificateentry","changelist","typedoc","arrangelist","trapezoid","createencrypt","mininav","stateengine","babyboynotes","babyboymain","babyboyscenes","grapes","grapefruit","notificationin","babylon","x86_angel","los_angeles"];
 
-var ArquivosRelevantes = ["downloads.dat","library5.dat","spam.dat","createtimes.cache","fileurns.cache","limewire.props","truecrypt.exe","lockdir.exe","library1.dat","library2.dat","searches.dat","gnutella.net","tor.exe","torchat.exe","main.db","known.met","ntuser.dat","sam","security","software","system","usrclass.dat","ActivitiesCache.db"];
+var ArquivosRelevantes = ["downloads.dat","library5.dat","spam.dat","createtimes.cache","fileurns.cache","limewire.props","truecrypt.exe","lockdir.exe","library1.dat","library2.dat","searches.dat","gnutella.net","tor.exe","torchat.exe","main.db","known.met","ntuser.dat","sam","security","software","system","usrclass.dat","activitiescache.db","activitiescache.db-wal","activitiescache.db-shm"];
 
-var PastasBuscasConteudo = ["chrome/","thunderbird/","firefox/","mozilla/","/temporary internet files/","/desktop/","/documents/","/recent/","/automaticdestinations/","/customdestinations/"];
+var PastasBuscasConteudo = ["chrome/","thunderbird/","firefox/","mozilla/","/temporary internet files/","/desktop/","/documents/","/recent/","/automaticdestinations/","/customdestinations/","/connecteddevicesplatform/"];
 
 // Exclui arquivos executáveis, ignora documentos
 var ExcluirConteudo = ["exe","nexe","dll","zip","7z","xlsx","docx","pak","rar","jar","swf","swz","ico","bdic","dic","iso", "vmdk", "vhdx", "vhd", "vdi","pdf"];
