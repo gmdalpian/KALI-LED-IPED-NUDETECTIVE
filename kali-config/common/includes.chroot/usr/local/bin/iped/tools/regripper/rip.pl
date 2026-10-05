@@ -1,4 +1,4 @@
-#! c:\perl\bin\perl.exe
+#! /usr/bin/perl
 #-------------------------------------------------------------------------
 # Rip - RegRipper, CLI version
 # Use this utility to run a plugins file or a single plugin against a Reg
@@ -32,6 +32,8 @@
 use strict;
 use Parse::Win32Registry qw(:REG_);
 use Getopt::Long;
+use lib '/usr/local/bin/iped/tools/regripper/';
+
 use Time::Local;
 use Digest::MD5;
 use File::Spec;
@@ -67,7 +69,7 @@ $str =~ s/($path[scalar(@path) - 1])//;
 # code updated 20190318
 my $plugindir;
 ($^O eq "MSWin32") ? ($plugindir = $str."plugins/")
-                   : ($plugindir = File::Spec->catfile("plugins"));
+                   : ($plugindir = "/usr/local/bin/iped/tools/regripper/plugins/");
 #my $plugindir = $str."plugins/";
 #my $plugindir = File::Spec->catfile("plugins");
 #print "Plugins Dir = ".$plugindir."\n";
@@ -190,7 +192,7 @@ if ($config{file}) {
 	}
 	foreach my $i (sort {$a <=> $b} keys %plugins) {
 		eval {
-#			require "plugins/".$plugins{$i}."\.pl";
+			require "plugins/".$plugins{$i}."\.pl";
 			my $plugin_file = File::Spec->catfile($plugindir,$plugins{$i}.".pl");
 			require $plugin_file;
 			$plugins{$i}->pluginmain($hive);

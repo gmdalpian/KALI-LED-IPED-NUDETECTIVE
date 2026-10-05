@@ -1,0 +1,16 @@
+source_os
+producttype
+timezone
+environment
+shutdown
+shutdowncount
+disableremotescm
+diag_sr
+backuprestore
+disablelastaccess
+pagefile
+hibernate
+processor_architecture
+crashcontrol
+nolmhash
+netlogon
