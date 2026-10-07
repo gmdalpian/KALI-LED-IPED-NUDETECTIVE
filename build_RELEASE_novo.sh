@@ -23,6 +23,7 @@ check_status() {
         echo "ERRO CRÍTICO: $1 falhou. Abortando."
         exit 1
     fi
+    echo $1
 }
 
 # --- Função de Cópia e Preparação ---
