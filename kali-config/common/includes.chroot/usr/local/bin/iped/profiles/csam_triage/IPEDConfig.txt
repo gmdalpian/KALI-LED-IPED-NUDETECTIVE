@@ -35,4 +35,7 @@ enableHTMLReport = false
 enableCSAMDetector = true
 enableFaceRecognition = false
 enableAgeEstimation = false
+enableOCR = false
+enableRemoteImageClassifier = false
+enableQRCode = false
 

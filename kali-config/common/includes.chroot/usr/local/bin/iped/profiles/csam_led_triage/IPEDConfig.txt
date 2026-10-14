@@ -36,5 +36,6 @@ enableCSAMDetector = true
 enableFaceRecognition = false
 enableAgeEstimation = false
 enableQRCode = false
+enableRemoteImageClassifier = false
 enableOCR = false
 
