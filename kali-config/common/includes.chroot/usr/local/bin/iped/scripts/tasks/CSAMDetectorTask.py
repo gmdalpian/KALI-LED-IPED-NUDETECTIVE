@@ -56,6 +56,11 @@ AMP_DTYPE = None  # Will be set to torch.float16 or torch.float32
 IMG_MEAN_PYTORCH = None
 IMG_STD_PYTORCH = None
 
+# PyTorch normalization and interpolation globals (defaults to legacy ImageNet / Bilinear)
+PYTORCH_MEAN = [0.485, 0.456, 0.406]
+PYTORCH_STD = [0.229, 0.224, 0.225]
+PYTORCH_INTERP = None
+
 # --- Global Control Variables ---
 MOTOR_IA = None
 MODELO_CARREGADO = None
@@ -118,6 +123,7 @@ AI_CLASSIFICATION_SKIP_DUPLICATE = "duplicate"
 def carregar_e_configurar_modelo():
     """Central function that loads the correct model (TF, PyTorch) or checks metadata (TFLite, ONNX)."""
     global MODELO_CARREGADO, DEVICE, CACHE, CSAM_IMG_SIZE, ONNX_MODEL_TYPE, ONNX_INPUT_NAME, ONNX_OUTPUT_NAME, AMP_ENABLED, AMP_DTYPE
+    global PYTORCH_MEAN, PYTORCH_STD, PYTORCH_INTERP
     
     MODELO_CARREGADO = caseData.getCaseObject('csam_model_unificado')
     
@@ -157,6 +163,19 @@ def carregar_e_configurar_modelo():
                 # 2. Get metadata from inside the checkpoint
                 num_classes_saved = checkpoint.get('num_classes', NUM_CLASSES)
                 img_size_saved = checkpoint.get('img_size')
+                saved_mean = checkpoint.get('mean')
+                saved_std = checkpoint.get('std')
+
+                if saved_mean is not None and saved_std is not None:
+                    PYTORCH_MEAN = [float(x) for x in saved_mean]
+                    PYTORCH_STD = [float(x) for x in saved_std]
+                    PYTORCH_INTERP = transforms.InterpolationMode.BICUBIC
+                    logger.info(f"CSAMDetector: Checkpoint normalization detected (mean={PYTORCH_MEAN}, std={PYTORCH_STD}, BICUBIC).")
+                else:
+                    PYTORCH_MEAN = [0.485, 0.456, 0.406]
+                    PYTORCH_STD = [0.229, 0.224, 0.225]
+                    PYTORCH_INTERP = transforms.InterpolationMode.BILINEAR
+                    logger.info("CSAMDetector: Legacy ImageNet normalization detected (BILINEAR).")
 
                 # 3. Use the saved metadata to configure the model
                 if img_size_saved:
@@ -175,6 +194,8 @@ def carregar_e_configurar_modelo():
                     'S': 'tf_efficientnetv2_s.in21k_ft_in1k',
                     'M': 'tf_efficientnetv2_m.in21k_ft_in1k',
                     'L': 'tf_efficientnetv2_l.in21k_ft_in1k',
+                    'EVA02_L': 'eva02_large_patch14_448.mim_m38m_ft_in22k_in1k',
+                    'EVA02_B': 'eva02_base_patch14_448.mim_in22k_ft_in22k_in1k',
                                        
                     # TinyViT - Tiny Vision Transformer
                     'TinyViT-5M': 'tiny_vit_5m_224.dist_in22k',
@@ -186,7 +207,7 @@ def carregar_e_configurar_modelo():
                 if model_name_to_load in model_map:
                     model_timm_name = model_map[model_name_to_load]
                 else:
-                    model_timm_name = timm_name # Assumes it is already the technical name
+                    model_timm_name = model_name_to_load # Assumes it is already the technical name
                 
                 logger.info(f"CSAMDetector: Building model architecture: {model_timm_name}")
 
@@ -200,7 +221,7 @@ def carregar_e_configurar_modelo():
                     # Tries to load as an old checkpoint (just for safety)
                     MODELO_CARREGADO.load_state_dict(checkpoint)
                 
-                MODELO_CARREGADO.to(DEVICE)
+                MODELO_CARREGADO.to(device=DEVICE, dtype=torch.float32)
                 MODELO_CARREGADO.eval()
                 
                 log_mode = "FP32 (CPU/Legacy Fallback)"
@@ -450,7 +471,7 @@ def processar_imagem(item):
 # Processes images from a path or byte array and returns the ready tensor
 def get_tensor_from_path_or_bytes(file_path, file_bytes=None):
     """Loads and preprocesses the image to the correct format (tensor)."""
-    global CSAM_IMG_SIZE, ONNX_MODEL_TYPE
+    global CSAM_IMG_SIZE, ONNX_MODEL_TYPE, PYTORCH_MEAN, PYTORCH_STD, PYTORCH_INTERP
 
     if(file_path is None):
         file_path = io.BytesIO(file_bytes)
@@ -465,9 +486,10 @@ def get_tensor_from_path_or_bytes(file_path, file_bytes=None):
 
     elif MOTOR_IA == 'pytorch':
         image = Image.open(file_path).convert('RGB')
+        interp = PYTORCH_INTERP if PYTORCH_INTERP is not None else transforms.InterpolationMode.BILINEAR
         transform = transforms.Compose([
-            transforms.Resize((CSAM_IMG_SIZE, CSAM_IMG_SIZE)), transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+            transforms.Resize((CSAM_IMG_SIZE, CSAM_IMG_SIZE), interpolation=interp), transforms.ToTensor(),
+            transforms.Normalize(mean=PYTORCH_MEAN, std=PYTORCH_STD)])
         return transform(image)  
 
     elif MOTOR_IA == 'onnx':
@@ -1103,7 +1125,7 @@ class CSAMDetectorTask:
                         outputs = MODELO_CARREGADO(torch.stack(tensores).to(DEVICE))
                     
                     # Ensure conversion back to float32 before softmax for stability
-                    return torch.nn.functional.softmax(outputs, dim=1).cpu().numpy()
+                    return torch.nn.functional.softmax(outputs.float(), dim=1).cpu().numpy()
             
             elif MOTOR_IA == 'tflite':                
                 interpreter = self.modelo_tflite
