@@ -9,7 +9,7 @@ see https://github.com/sepinf-inc/IPED/wiki/User-Manual#python-modules
 
 __author__ = "Guilherme Dalpian"
 __email__ = "gmdalpian@gmail.com"
-__version__ = "1.6" # Auto configurations - batch size according to memory and model
+__version__ = "1.7" # New models - version 3_2
 
 import traceback
 import io
@@ -74,6 +74,7 @@ IS_IPED_422 = False
 ONNX_MODEL_TYPE = None
 ONNX_INPUT_NAME = None
 ONNX_OUTPUT_NAME = None
+ONNX_INTERP = None
 
 # Configurable parameters defaults
 CSAM_MODELFILE = 'tensorflow_B0_v3_1.keras'
@@ -123,7 +124,7 @@ AI_CLASSIFICATION_SKIP_DUPLICATE = "duplicate"
 def carregar_e_configurar_modelo():
     """Central function that loads the correct model (TF, PyTorch) or checks metadata (TFLite, ONNX)."""
     global MODELO_CARREGADO, DEVICE, CACHE, CSAM_IMG_SIZE, ONNX_MODEL_TYPE, ONNX_INPUT_NAME, ONNX_OUTPUT_NAME, AMP_ENABLED, AMP_DTYPE
-    global PYTORCH_MEAN, PYTORCH_STD, PYTORCH_INTERP
+    global PYTORCH_MEAN, PYTORCH_STD, PYTORCH_INTERP, IMG_MEAN_PYTORCH, IMG_STD_PYTORCH, ONNX_INTERP
     
     MODELO_CARREGADO = caseData.getCaseObject('csam_model_unificado')
     
@@ -194,6 +195,12 @@ def carregar_e_configurar_modelo():
                     'S': 'tf_efficientnetv2_s.in21k_ft_in1k',
                     'M': 'tf_efficientnetv2_m.in21k_ft_in1k',
                     'L': 'tf_efficientnetv2_l.in21k_ft_in1k',
+                    'EB0_RA4': 'efficientnet_b0.ra4_e3600_r224_in1k',
+                    'EB1_RA4': 'efficientnet_b1.ra4_e3600_r240_in1k',
+                    'MNV4': 'mobilenetv4_conv_medium.e500_r224_in1k',
+                    'MNV4_CONV': 'mobilenetv4_conv_medium.e500_r224_in1k',
+                    'MNV4_HYBRID': 'mobilenetv4_hybrid_medium.e500_r224_in1k',
+                    'EFFV2_S': 'tf_efficientnetv2_s.in21k_ft_in1k',
                     'EVA02_L': 'eva02_large_patch14_448.mim_m38m_ft_in22k_in1k',
                     'EVA02_B': 'eva02_base_patch14_448.mim_in22k_ft_in22k_in1k',
                                        
@@ -300,7 +307,21 @@ def carregar_e_configurar_modelo():
                 if input_shape[1] == 3 and isinstance(input_shape[2], int) and isinstance(input_shape[3], int):
                     CSAM_IMG_SIZE = input_shape[2] 
                     ONNX_MODEL_TYPE = 'pytorch' # Defines the global type
-                    logger.info(f"CSAMDetector: ONNX (PyTorch-style, Channels-First) detected. Image size: {CSAM_IMG_SIZE}x{CSAM_IMG_SIZE}")
+                    custom_meta = MODELO_CARREGADO.get_modelmeta().custom_metadata_map
+                    if custom_meta and 'mean' in custom_meta and 'std' in custom_meta:
+                        import json
+                        mean_list = json.loads(custom_meta['mean'])
+                        std_list = json.loads(custom_meta['std'])
+                        interp_str = custom_meta.get('interpolation', 'bicubic').lower()
+                        IMG_MEAN_PYTORCH = np.array(mean_list, dtype=np.float32).reshape(1, 1, 3)
+                        IMG_STD_PYTORCH = np.array(std_list, dtype=np.float32).reshape(1, 1, 3)
+                        ONNX_INTERP = Image.BICUBIC if interp_str == 'bicubic' else Image.BILINEAR
+                        logger.info(f"CSAMDetector: ONNX (PyTorch-style) with metadata detected. Image size: {CSAM_IMG_SIZE}x{CSAM_IMG_SIZE}, mean={mean_list}, std={std_list}, interp={interp_str.upper()}")
+                    else:
+                        IMG_MEAN_PYTORCH = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(1, 1, 3)
+                        IMG_STD_PYTORCH = np.array([0.229, 0.224, 0.225], dtype=np.float32).reshape(1, 1, 3)
+                        ONNX_INTERP = Image.BILINEAR
+                        logger.info(f"CSAMDetector: ONNX (PyTorch-style, Channels-First) detected. Image size: {CSAM_IMG_SIZE}x{CSAM_IMG_SIZE}")
                 
                 # TensorFlow: [batch, height, width, 3]
                 elif input_shape[3] == 3 and isinstance(input_shape[1], int) and isinstance(input_shape[2], int):
@@ -471,7 +492,7 @@ def processar_imagem(item):
 # Processes images from a path or byte array and returns the ready tensor
 def get_tensor_from_path_or_bytes(file_path, file_bytes=None):
     """Loads and preprocesses the image to the correct format (tensor)."""
-    global CSAM_IMG_SIZE, ONNX_MODEL_TYPE, PYTORCH_MEAN, PYTORCH_STD, PYTORCH_INTERP
+    global CSAM_IMG_SIZE, ONNX_MODEL_TYPE, PYTORCH_MEAN, PYTORCH_STD, PYTORCH_INTERP, ONNX_INTERP
 
     if(file_path is None):
         file_path = io.BytesIO(file_bytes)
@@ -493,7 +514,7 @@ def get_tensor_from_path_or_bytes(file_path, file_bytes=None):
         return transform(image)  
 
     elif MOTOR_IA == 'onnx':
-        image_resample = Image.BILINEAR
+        image_resample = ONNX_INTERP if ONNX_INTERP is not None else Image.BILINEAR
         if ONNX_MODEL_TYPE == 'tensorflow':
             image_resample = Image.NEAREST
             
