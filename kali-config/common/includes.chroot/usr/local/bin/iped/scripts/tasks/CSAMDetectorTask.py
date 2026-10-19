@@ -166,12 +166,13 @@ def carregar_e_configurar_modelo():
                 img_size_saved = checkpoint.get('img_size')
                 saved_mean = checkpoint.get('mean')
                 saved_std = checkpoint.get('std')
+                saved_interp = str(checkpoint.get('interpolation', 'bicubic')).lower()
 
                 if saved_mean is not None and saved_std is not None:
                     PYTORCH_MEAN = [float(x) for x in saved_mean]
                     PYTORCH_STD = [float(x) for x in saved_std]
-                    PYTORCH_INTERP = transforms.InterpolationMode.BICUBIC
-                    logger.info(f"CSAMDetector: Checkpoint normalization detected (mean={PYTORCH_MEAN}, std={PYTORCH_STD}, BICUBIC).")
+                    PYTORCH_INTERP = transforms.InterpolationMode.BICUBIC if saved_interp == 'bicubic' else transforms.InterpolationMode.BILINEAR
+                    logger.info(f"CSAMDetector: Checkpoint normalization detected (mean={PYTORCH_MEAN}, std={PYTORCH_STD}, {saved_interp.upper()}).")
                 else:
                     PYTORCH_MEAN = [0.485, 0.456, 0.406]
                     PYTORCH_STD = [0.229, 0.224, 0.225]
