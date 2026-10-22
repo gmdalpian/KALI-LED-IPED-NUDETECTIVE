@@ -361,12 +361,15 @@ def detect_best_config():
 
     # Priority lists
     gpu_files = [
-        "pytorch_EVA02_L_v3_1_1.pth",
+        "pytorch_EVA02_L_v3_2.pth",
+        "pytorch_EVA02_L_v3_1_1.pth",        
         "pytorch_EVA02_B_v3_1.pth",
+        "pytorch_S_v3_2.pth",
         "pytorch_S_v3_1.pth"
     ]
     
     cpu_files = [
+        "MobileNetV4_v3_2.onnx",
         "onnx_B0_tensorflow_v3_1.onnx",
         "MobileNetV4_v3_1.onnx",
         "pytorch_B0_v3_1_2_fp32.onnx"
