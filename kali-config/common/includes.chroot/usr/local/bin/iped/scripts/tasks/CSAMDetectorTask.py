@@ -50,7 +50,7 @@ CSAM_IMG_SIZE = 224
 
 # --- Global GPU Optimization Variables ---
 AMP_ENABLED = False
-AMP_DTYPE = None  # Will be set to torch.float16 or torch.float32
+AMP_DTYPE = None  # Will be set to torch.bfloat16, torch.float16 or torch.float32
 
 # ImageNet normalization constants (used by PyTorch-style ONNX; set up during initialization)
 IMG_MEAN_PYTORCH = None
@@ -237,8 +237,15 @@ def carregar_e_configurar_modelo():
             
                 if DEVICE.type == 'cuda':
                     major, minor = torch.cuda.get_device_capability(DEVICE)
-                    # Compute Capability >= 7.0 (RTX series) supports FP16 Tensor Cores
-                    if major >= 7:
+                    # Compute Capability >= 8.0 (Ampere, Ada, Blackwell) supports BF16 and TF32
+                    if major >= 8 and torch.cuda.is_bf16_supported():
+                        AMP_ENABLED = True
+                        AMP_DTYPE = torch.bfloat16
+                        torch.backends.cuda.matmul.allow_tf32 = True
+                        torch.backends.cudnn.allow_tf32 = True
+                        log_mode = f"BF16 Mixed Precision + TF32 (Compute Capability {major}.{minor})"
+                    # Compute Capability 7.x (Volta, Turing) supports FP16 Tensor Cores
+                    elif major >= 7:
                         AMP_ENABLED = True
                         AMP_DTYPE = torch.float16
                         log_mode = f"FP16 Mixed Precision (Compute Capability {major}.{minor})"
@@ -362,7 +369,7 @@ def detect_best_config():
     # Priority lists
     gpu_files = [
         "pytorch_EVA02_L_v3_2.pth",
-        "pytorch_EVA02_L_v3_1_1.pth",        
+        "pytorch_EVA02_L_v3_1_1.pth",
         "pytorch_EVA02_B_v3_1.pth",
         "pytorch_S_v3_2.pth",
         "pytorch_S_v3_1.pth"
@@ -608,12 +615,12 @@ def get_scores_from_prediction(scores):
     porn_idx = CLASS_NAMES.index('porn')
     other_idx = CLASS_NAMES.index('other')
     
-    csam_score_formatado = int(scores[csam_idx]*100)
-    porn_score_formatado = int(scores[porn_idx]*100)
-    other_score_formatado = int(scores[other_idx]*100)
+    csam_score_formatado = int(float(scores[csam_idx])*100)
+    porn_score_formatado = int(float(scores[porn_idx])*100)
+    other_score_formatado = int(float(scores[other_idx])*100)
     
-    category_index = np.argmax(scores)
-    csam_category = CLASS_NAMES[category_index]
+    category_index = int(np.argmax(scores))
+    csam_category = str(CLASS_NAMES[category_index])
 
 
     results =  { 
@@ -1149,8 +1156,8 @@ class CSAMDetectorTask:
                     with torch.amp.autocast(device_type=DEVICE.type, dtype=AMP_DTYPE, enabled=AMP_ENABLED):
                         outputs = MODELO_CARREGADO(torch.stack(tensores).to(DEVICE))
                     
-                    # Ensure conversion back to float32 before softmax for stability
-                    return torch.nn.functional.softmax(outputs.float(), dim=1).cpu().numpy()
+                    # Ensure conversion back to float32 before softmax for stability and JEP compatibility
+                    return torch.nn.functional.softmax(outputs.float(), dim=1).cpu().numpy().astype(np.float32)
             
             elif MOTOR_IA == 'tflite':                
                 interpreter = self.modelo_tflite
@@ -1313,7 +1320,7 @@ class CSAMDetectorTask:
         total_other_score_sum = 0.0
 
         for i, frame_vector in enumerate(frame_predictions):
-            frame_vector = list(frame_vector) 
+            frame_vector = frame_vector.tolist() if hasattr(frame_vector, 'tolist') else [float(x) for x in frame_vector]
             
             csam_score = frame_vector[csam_idx]
             porn_score = frame_vector[porn_idx]
