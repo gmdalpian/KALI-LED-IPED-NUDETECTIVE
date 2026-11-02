@@ -40,6 +40,8 @@
         <!-- <parser class="org.apache.tika.parser.crypto.TSDParser"></parser> -->
         <parser class="iped.parsers.emule.EmuleCollectionParser"></parser>
         <parser class="org.apache.tika.parser.csv.TextAndCSVParser"></parser>
+<!--         <parser class="org.apache.tika.parser.dwg.DWGParser"></parser>
+        <parser class="org.apache.tika.parser.epub.EpubParser"></parser> -->
         <!--Just extracts metadata. Used below in MultipleParser
         <parser class="org.apache.tika.parser.executable.ExecutableParser"></parser>-->
         <!-- <parser class="org.apache.tika.parser.feed.FeedParser"></parser> -->
@@ -47,8 +49,8 @@
         <parser class="org.apache.tika.parser.font.AdobeFontMetricParser"></parser>
         <parser class="org.apache.tika.parser.font.TrueTypeParser"></parser>-->
         <parser class="org.apache.tika.parser.html.HtmlParser"></parser>
-        <parser class="org.apache.tika.parser.hwp.HwpV5Parser"></parser>
-        <parser class="org.apache.tika.parser.image.BPGParser"></parser>
+<!--         <parser class="org.apache.tika.parser.hwp.HwpV5Parser"></parser>
+        <parser class="org.apache.tika.parser.image.BPGParser"></parser> -->
         <!--<parser class="org.apache.tika.parser.image.ImageParser"></parser>-->
         <!--<parser class="org.apache.tika.parser.image.PSDParser"></parser>-->
         <!--<parser class="org.apache.tika.parser.image.TiffParser"></parser>-->
@@ -148,6 +150,8 @@
             <mime>application/vnd.rn-realmedia</mime>
             <mime>application/java-archive</mime>
             <mime>audio/ilbc</mime>
+            <mime>application/x-tika-unix-dump</mime>
+            <mime>application/x-cpio</mime>			
         </parser>
 
 <!--         <parser class="org.gagravarr.tika.FlacParser"></parser>
