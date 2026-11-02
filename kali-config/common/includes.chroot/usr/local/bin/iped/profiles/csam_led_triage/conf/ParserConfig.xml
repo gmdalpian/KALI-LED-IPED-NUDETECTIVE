@@ -20,6 +20,7 @@
 <properties>
 
     <parsers>
+        <parser class="iped.parsers.external.CompositeExternalParser"></parser>
 
         <parser class="org.apache.tika.parser.apple.AppleSingleFileParser"></parser>
         <parser class="iped.parsers.plist.PListParser"></parser>
