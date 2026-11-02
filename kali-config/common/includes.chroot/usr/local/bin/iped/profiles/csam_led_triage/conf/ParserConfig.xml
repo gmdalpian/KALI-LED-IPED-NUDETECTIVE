@@ -20,7 +20,6 @@
 <properties>
 
     <parsers>
-        <!-- <parser class="iped.parsers.external.CompositeExternalParser"></parser> -->
 
         <parser class="org.apache.tika.parser.apple.AppleSingleFileParser"></parser>
         <parser class="iped.parsers.plist.PListParser"></parser>
@@ -40,8 +39,6 @@
         <!-- <parser class="org.apache.tika.parser.crypto.TSDParser"></parser> -->
         <parser class="iped.parsers.emule.EmuleCollectionParser"></parser>
         <parser class="org.apache.tika.parser.csv.TextAndCSVParser"></parser>
-<!--         <parser class="org.apache.tika.parser.dwg.DWGParser"></parser>
-        <parser class="org.apache.tika.parser.epub.EpubParser"></parser> -->
         <!--Just extracts metadata. Used below in MultipleParser
         <parser class="org.apache.tika.parser.executable.ExecutableParser"></parser>-->
         <!-- <parser class="org.apache.tika.parser.feed.FeedParser"></parser> -->
@@ -49,8 +46,8 @@
         <parser class="org.apache.tika.parser.font.AdobeFontMetricParser"></parser>
         <parser class="org.apache.tika.parser.font.TrueTypeParser"></parser>-->
         <parser class="org.apache.tika.parser.html.HtmlParser"></parser>
-<!--         <parser class="org.apache.tika.parser.hwp.HwpV5Parser"></parser>
-        <parser class="org.apache.tika.parser.image.BPGParser"></parser> -->
+        <parser class="org.apache.tika.parser.hwp.HwpV5Parser"></parser>
+        <parser class="org.apache.tika.parser.image.BPGParser"></parser>
         <!--<parser class="org.apache.tika.parser.image.ImageParser"></parser>-->
         <!--<parser class="org.apache.tika.parser.image.PSDParser"></parser>-->
         <!--<parser class="org.apache.tika.parser.image.TiffParser"></parser>-->
@@ -91,9 +88,9 @@
         <parser class="org.apache.tika.parser.microsoft.ooxml.xwpf.ml2006.Word2006MLParser"></parser>
         <parser class="org.apache.tika.parser.microsoft.xml.WordMLParser"></parser>
         <parser class="org.apache.tika.parser.microsoft.xml.SpreadsheetMLParser"></parser>
-<!--         <parser class="org.apache.tika.parser.mif.MIFParser"></parser>
+        <parser class="org.apache.tika.parser.mif.MIFParser"></parser>
         <parser class="org.apache.tika.parser.mp3.Mp3Parser"></parser>
-        <parser class="org.apache.tika.parser.mp4.MP4Parser"></parser> -->
+        <parser class="org.apache.tika.parser.mp4.MP4Parser"></parser>
         <!-- we use strings parser instead of these scientific data parsers
         <parser class="org.apache.tika.parser.hdf.HDFParser"></parser>
         <parser class="org.apache.tika.parser.netcdf.NetCDFParser"></parser>-->
@@ -150,8 +147,6 @@
             <mime>application/vnd.rn-realmedia</mime>
             <mime>application/java-archive</mime>
             <mime>audio/ilbc</mime>
-            <mime>application/x-tika-unix-dump</mime>
-            <mime>application/x-cpio</mime>			
         </parser>
 
 <!--         <parser class="org.gagravarr.tika.FlacParser"></parser>
@@ -161,13 +156,13 @@
         <parser class="org.gagravarr.tika.SpeexParser"></parser>
         <parser class="org.gagravarr.tika.TheoraParser"></parser> -->
 
-        <!-- <parser class="iped.parsers.ocr.OCRParser"></parser> -->
+        <parser class="iped.parsers.ocr.OCRParser"></parser>
 
         <parser class="iped.parsers.misc.MultipleParser">
             <mime>image/jpeg</mime>
             <params>
                 <param name="parserName" type="string">JPEGParser</param>
-                <param name="parsers" type="string">org.apache.tika.parser.image.JpegParser</param>
+                <param name="parsers" type="string">iped.parsers.ocr.OCRParser;org.apache.tika.parser.image.JpegParser</param>
             </params>
         </parser>
 
@@ -179,7 +174,7 @@
             <mime>image/x-jbig2</mime>
             <params>
                 <param name="parserName" type="string">ImageParser</param>
-                <param name="parsers" type="string">org.apache.tika.parser.image.ImageParser</param>
+                <param name="parsers" type="string">iped.parsers.ocr.OCRParser;org.apache.tika.parser.image.ImageParser</param>
             </params>
         </parser>
 
@@ -187,7 +182,7 @@
             <mime>image/webp</mime>
             <params>
                 <param name="parserName" type="string">WebpParser</param>
-                <param name="parsers" type="string">org.apache.tika.parser.image.WebPParser</param>
+                <param name="parsers" type="string">iped.parsers.ocr.OCRParser;org.apache.tika.parser.image.WebPParser</param>
             </params>
         </parser>
 
@@ -195,7 +190,7 @@
             <mime>image/vnd.adobe.photoshop</mime>
             <params>
                 <param name="parserName" type="string">PSDParser</param>
-                <param name="parsers" type="string">org.apache.tika.parser.image.PSDParser</param>
+                <param name="parsers" type="string">iped.parsers.ocr.OCRParser;org.apache.tika.parser.image.PSDParser</param>
             </params>
         </parser>
 
@@ -203,7 +198,7 @@
             <mime>image/tiff</mime>
             <params>
                 <param name="parserName" type="string">TiffParser</param>
-                <param name="parsers" type="string">org.apache.tika.parser.image.TiffParser;iped.parsers.image.TiffPageParser</param>
+                <param name="parsers" type="string">iped.parsers.ocr.OCRParser;org.apache.tika.parser.image.TiffParser;iped.parsers.image.TiffPageParser</param>
             </params>
         </parser>
 
@@ -214,7 +209,7 @@
             <mime>image/heif-sequence</mime>
             <params>
                 <param name="parserName" type="string">HeicParser</param>
-                <param name="parsers" type="string">org.apache.tika.parser.image.HeifParser</param>
+                <param name="parsers" type="string">iped.parsers.ocr.OCRParser;org.apache.tika.parser.image.HeifParser</param>
             </params>
         </parser>
 
@@ -222,7 +217,7 @@
             <mime>image/emf</mime>
             <params>
                 <param name="parserName" type="string">EMFParser</param>
-                <param name="parsers" type="string">org.apache.tika.parser.microsoft.EMFParser</param>
+                <param name="parsers" type="string">iped.parsers.ocr.OCRParser;org.apache.tika.parser.microsoft.EMFParser</param>
             </params>
         </parser>
 
@@ -230,7 +225,7 @@
             <mime>image/wmf</mime>
             <params>
                 <param name="parserName" type="string">WMFParser</param>
-                <param name="parsers" type="string">org.apache.tika.parser.microsoft.WMFParser</param>
+                <param name="parsers" type="string">iped.parsers.ocr.OCRParser;org.apache.tika.parser.microsoft.WMFParser</param>
             </params>
         </parser>
 
@@ -238,7 +233,7 @@
             <mime>image/svg+xml</mime>
             <params>
                 <param name="parserName" type="string">SVGXMLParser</param>
-                <param name="parsers" type="string">iped.parsers.misc.XMLParser</param>
+                <param name="parsers" type="string">iped.parsers.ocr.OCRParser;iped.parsers.misc.XMLParser</param>
             </params>
         </parser>
 
@@ -376,15 +371,12 @@
         <parser class="iped.parsers.misc.OFXParser"></parser>
         <parser class="iped.parsers.misc.OFCParser"></parser>
         <parser class="iped.parsers.misc.PDFTextParser"></parser>
-<!--         <parser class="iped.parsers.video.FLVParserWrapper"></parser>
-        <parser class="iped.parsers.video.EmptyVideoParser"></parser> -->
+        <parser class="iped.parsers.video.FLVParserWrapper"></parser>
+        <parser class="iped.parsers.video.EmptyVideoParser"></parser>
         <parser class="iped.parsers.standard.RawStringParser">
             <mime>application/skype</mime>
             <mime>application/irpf</mime>
-            <mime>application/x-tika-msoffice</mime>
             <mime>application/x-nls</mime>
-            <mime>application/x-edb</mime>
-            <mime>application/x-sqlite3</mime>
         </parser>
         <!-- <parser class="iped.geo.parsers.GeofileParser"></parser> -->
         <parser class="iped.parsers.winx.WinXTimelineParser"></parser>
